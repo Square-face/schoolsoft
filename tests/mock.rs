@@ -9,7 +9,7 @@ mod login {
 
         let url = server.url();
 
-        let mock = server.mock("POST", "/mock_school/api/login")
+        let mock = server.mock("POST", "/mock_school/rest/app/login")
         .with_status(200)
         .with_body(r#"{
             "pictureUrl": "pictureFile.jsp?studentId=1337",
@@ -72,7 +72,7 @@ mod login {
         let url = server.url();
 
         let mock = server
-            .mock("POST", "/mock_school/api/login")
+            .mock("POST", "/mock_school/rest/app/login")
             .with_status(401)
             .with_body(
                 r#"{

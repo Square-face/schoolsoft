@@ -133,7 +133,7 @@ impl Client {
         school: &str,
     ) -> Result<(), RequestError> {
         // Construct url
-        let url = format!("{}/{}/api/login", self.base_url, school);
+        let url = format!("{}/{}/rest/app/login", self.base_url, school);
         dbg!(&url);
 
         // Construct body
