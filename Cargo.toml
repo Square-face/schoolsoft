@@ -9,6 +9,7 @@ edition = "2021"
 reqwest = "0.11.23"
 serde = { version = "1.0.196", features = ["derive"] }
 serde_json = "1.0"
+serde_repr = "0.1"
 
 [dev-dependencies]
 mockito = "1.2.0"
