@@ -1,10 +1,10 @@
 #[cfg(test)]
-mod login_test {
+mod login {
     use schoolsoft::{types::UserType, ClientBuilder, RequestError};
     use tokio::test;
 
     #[test]
-    async fn login_success() {
+    async fn success() {
         let mut server = mockito::Server::new();
 
         let url = server.url();
@@ -66,7 +66,7 @@ mod login_test {
     }
 
     #[test]
-    async fn login_failure() {
+    async fn failure() {
         let mut server = mockito::Server::new();
 
         let url = server.url();
