@@ -1,11 +1,11 @@
-
 pub mod types;
 
 /// Api client for the api used by schoolsofts app
+#[derive(Debug)]
 pub struct Client {
     client: reqwest::Client,
     /// Url to put before all requests.
-    /// Default: <https://sms.schoolsoft.se/>
+    /// Default: <https://sms.schoolsoft.se>
     ///
     /// Can be modified for testing purposes.
     base_url: String,
@@ -23,12 +23,22 @@ pub struct Client {
     pub user: Option<types::User>,
 }
 
+#[derive(Debug)]
+pub enum RequestError {
+    RequestError(reqwest::Error),
+    ReadError(reqwest::Error),
+    ParseError(serde_json::Error),
+    InvalidCredentials,
+    UnknownError,
+    UncheckedCode(reqwest::StatusCode),
+}
+
 /// Client builder.
 ///
 /// Usefull for configuring the client.
 ///
 /// The default values are:
-/// - base_url: <https://sms.schoolsoft.se/>
+/// - base_url: <https://sms.schoolsoft.se>
 /// - device_id: ""
 ///
 /// # Examples
@@ -38,11 +48,11 @@ pub struct Client {
 /// ```
 /// # use schoolsoft::ClientBuilder;
 /// let client = ClientBuilder::new()
-///   .base_url("https://example.com/".to_string())
+///   .base_url("https://example.com".to_string())
 ///   .device_id("1234567890".to_string())
 ///   .build();
 ///
-/// assert_eq!(client.base_url(), "https://example.com/");
+/// assert_eq!(client.base_url(), "https://example.com");
 /// assert_eq!(client.device_id(), "1234567890");
 /// ```
 ///
@@ -51,9 +61,9 @@ pub struct Client {
 /// ```
 /// # use schoolsoft::ClientBuilder;
 /// let client = ClientBuilder::new()
-///    .base_url("https://example.com/".to_string())
+///    .base_url("https://example.com".to_string())
 ///    .build();
-/// assert_eq!(client.base_url(), "https://example.com/");
+/// assert_eq!(client.base_url(), "https://example.com");
 /// assert_eq!(client.device_id(), "");
 /// ```
 ///
@@ -65,7 +75,7 @@ pub struct Client {
 ///    .device_id("1234567890".to_string())
 ///    .build();
 ///
-/// assert_eq!(client.base_url(), "https://sms.schoolsoft.se/");
+/// assert_eq!(client.base_url(), "https://sms.schoolsoft.se");
 /// assert_eq!(client.device_id(), "1234567890");
 /// ```
 ///
@@ -76,7 +86,7 @@ pub struct Client {
 /// let client = ClientBuilder::new()
 ///     .build();
 ///
-/// assert_eq!(client.base_url(), "https://sms.schoolsoft.se/");
+/// assert_eq!(client.base_url(), "https://sms.schoolsoft.se");
 /// assert_eq!(client.device_id(), "");
 /// ```
 ///
@@ -86,17 +96,16 @@ pub struct ClientBuilder {
 }
 
 impl Client {
-
     /// Get the base url.
     ///
     /// # Examples
     /// ```
     /// # use schoolsoft::ClientBuilder;
     /// let client = ClientBuilder::new()
-    ///   .base_url("https://example.com/".to_string())
+    ///   .base_url("https://example.com".to_string())
     ///   .build();
     ///
-    /// assert_eq!(client.base_url(), "https://example.com/");
+    /// assert_eq!(client.base_url(), "https://example.com");
     /// ```
     pub fn base_url(&self) -> &str {
         self.base_url.as_ref()
@@ -115,6 +124,55 @@ impl Client {
     pub fn device_id(&self) -> &str {
         self.device_id.as_ref()
     }
+
+    /// Attempt to login with the given credentials.
+    pub async fn login(
+        &mut self,
+        username: &str,
+        password: &str,
+        school: &str,
+    ) -> Result<(), RequestError> {
+        // Construct url
+        let url = format!("{}/{}/api/login", self.base_url, school);
+        dbg!(&url);
+
+        // Construct body
+        let mut params = std::collections::HashMap::new();
+        params.insert("identification", username);
+        params.insert("verification", password);
+        params.insert("logintype", "4");
+        params.insert("usertype", "1");
+
+        let request = self
+            .client
+            .request(reqwest::Method::POST, url)
+            .form(&params);
+
+        let response = match request.send().await {
+            Err(err) => return Err(RequestError::RequestError(err)),
+            Ok(response) => response,
+        };
+
+        match response.status() {
+            reqwest::StatusCode::OK => (),
+            reqwest::StatusCode::UNAUTHORIZED => return Err(RequestError::InvalidCredentials),
+            code => return Err(RequestError::UncheckedCode(code)),
+        }
+
+        let contents = match response.text().await {
+            Err(err) => return Err(RequestError::ReadError(err)),
+            Ok(contents) => contents,
+        };
+
+        let user: types::User = match serde_json::from_str(&contents) {
+            Err(err) => return Err(RequestError::ParseError(err)),
+            Ok(user) => user,
+        };
+
+        self.user = Some(user);
+
+        Ok(())
+    }
 }
 
 impl ClientBuilder {
@@ -125,16 +183,16 @@ impl ClientBuilder {
 
     /// Set the base url.
     ///
-    /// Default: <https://sms.schoolsoft.se/>
+    /// Default: <https://sms.schoolsoft.se>
     ///
     /// # Examples
     /// ```
     /// # use schoolsoft::ClientBuilder;
     /// let client = ClientBuilder::new()
-    ///    .base_url("https://example.com/".to_string())
+    ///    .base_url("https://example.com".to_string())
     ///    .build();
     ///
-    /// assert_eq!(client.base_url(), "https://example.com/");
+    /// assert_eq!(client.base_url(), "https://example.com");
     /// ```
     pub fn base_url(mut self, base_url: String) -> Self {
         self.base_url = Some(base_url);
@@ -162,7 +220,9 @@ impl ClientBuilder {
     pub fn build(self) -> Client {
         Client {
             client: reqwest::Client::new(),
-            base_url: self.base_url.unwrap_or("https://sms.schoolsoft.se/".to_string()),
+            base_url: self
+                .base_url
+                .unwrap_or("https://sms.schoolsoft.se".to_string()),
             device_id: self.device_id.unwrap_or("".to_string()),
             user: None,
         }
@@ -185,9 +245,9 @@ mod client_builder_tests {
     #[test]
     fn with_base_url() {
         let client = ClientBuilder::new()
-            .base_url("https://sms.schoolsoft.se/".to_string())
+            .base_url("https://sms.schoolsoft.se".to_string())
             .build();
 
-        assert_eq!(client.base_url(), "https://sms.schoolsoft.se/");
+        assert_eq!(client.base_url(), "https://sms.schoolsoft.se");
     }
 }
