@@ -48,6 +48,16 @@ pub enum RequestError {
 /// ```
 /// # use schoolsoft::ClientBuilder;
 /// let client = ClientBuilder::new()
+///    .device_id("1234567890".to_string())
+///    .build();
+///
+/// assert_eq!(client.base_url(), "https://sms.schoolsoft.se");
+/// assert_eq!(client.device_id(), "1234567890");
+/// ```
+///
+/// ```
+/// # use schoolsoft::ClientBuilder;
+/// let client = ClientBuilder::new()
 ///   .base_url("https://example.com".to_string())
 ///   .device_id("1234567890".to_string())
 ///   .build();
@@ -69,15 +79,6 @@ pub enum RequestError {
 ///
 /// construct a client with a custom device_id
 ///
-/// ```
-/// # use schoolsoft::ClientBuilder;
-/// let client = ClientBuilder::new()
-///    .device_id("1234567890".to_string())
-///    .build();
-///
-/// assert_eq!(client.base_url(), "https://sms.schoolsoft.se");
-/// assert_eq!(client.device_id(), "1234567890");
-/// ```
 ///
 /// construct a client with the default values
 ///
@@ -96,36 +97,30 @@ pub struct ClientBuilder {
 }
 
 impl Client {
-    /// Get the base url.
-    ///
-    /// # Examples
-    /// ```
-    /// # use schoolsoft::ClientBuilder;
-    /// let client = ClientBuilder::new()
-    ///   .base_url("https://example.com".to_string())
-    ///   .build();
-    ///
-    /// assert_eq!(client.base_url(), "https://example.com");
-    /// ```
-    pub fn base_url(&self) -> &str {
-        self.base_url.as_ref()
-    }
-
-    /// Get the device id.
-    ///
-    /// # Examples
-    /// ```
-    /// # use schoolsoft::ClientBuilder;
-    /// let client = ClientBuilder::new()
-    ///   .device_id("1234567890".to_string())
-    ///   .build();
-    ///
-    /// assert_eq!(client.device_id(), "1234567890");
-    pub fn device_id(&self) -> &str {
-        self.device_id.as_ref()
-    }
-
     /// Attempt to login with the given credentials.
+    ///
+    /// `school` is the [types::SchoolListing::url_name] of the school.
+    /// username and password are the same as when loging into the website or mobile app
+    ///
+    /// # Arguments
+    /// - username: The username to login with.
+    /// - password: The password to login with.
+    /// - school: The school to login to.
+    ///
+    /// # Examples
+    /// ```
+    /// # use schoolsoft::ClientBuilder;
+    /// # use tokio::test;
+    ///
+    /// # #[test]
+    /// # async fn login() {
+    /// let mut client = ClientBuilder::new()
+    ///    .build();
+    ///
+    /// client.login("username", "password", "school").await;
+    /// # }
+    /// ```
+    ///
     pub async fn login(
         &mut self,
         username: &str,
@@ -172,6 +167,35 @@ impl Client {
         self.user = Some(user);
 
         Ok(())
+    }
+
+    /// Get the base url.
+    ///
+    /// # Examples
+    /// ```
+    /// # use schoolsoft::ClientBuilder;
+    /// let client = ClientBuilder::new()
+    ///   .base_url("https://example.com".to_string())
+    ///   .build();
+    ///
+    /// assert_eq!(client.base_url(), "https://example.com");
+    /// ```
+    pub fn base_url(&self) -> &str {
+        self.base_url.as_ref()
+    }
+
+    /// Get the device id.
+    ///
+    /// # Examples
+    /// ```
+    /// # use schoolsoft::ClientBuilder;
+    /// let client = ClientBuilder::new()
+    ///   .device_id("1234567890".to_string())
+    ///   .build();
+    ///
+    /// assert_eq!(client.device_id(), "1234567890");
+    pub fn device_id(&self) -> &str {
+        self.device_id.as_ref()
     }
 }
 
