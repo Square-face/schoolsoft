@@ -10,27 +10,27 @@ mod login {
         let url = server.url();
 
         let mock = server.mock("POST", "/mock_school/rest/app/login")
-        .with_status(200)
-        .with_body(r#"{
-            "pictureUrl": "pictureFile.jsp?studentId=1337",
-            "name": "Mock User",
-            "isOfAge": false,
-            "appKey": "123notreal",
-            "orgs": [
-                {
-                    "name": "Mock School",
-                    "blogger": false,
-                    "schoolType": 9,
-                    "leisureSchool": 0,
-                    "class": "F35b",
-                    "orgId": 1,
-                    "tokenLogin": "https://sms1.schoolsoft.se/mock_school/jsp/app/TokenLogin.jsp?token=TOKEN_PLACEHOLDER&orgid=1&childid=1337&redirect=https%3A%2F%2Fsms1.schoolsoft.se%2mock_school%2Fjsp%2Fstudent%2Fright_student_startpage.jsp"
-                }
-            ],
-            "type": 1,
-            "userId": 1337
-        }"#)
-        .create();
+            .with_status(200)
+            .with_body(r#"{
+                "pictureUrl": "pictureFile.jsp?studentId=1337",
+                "name": "Mock User",
+                "isOfAge": false,
+                "appKey": "123notreal",
+                "orgs": [
+                    {
+                        "name": "Mock School",
+                        "blogger": false,
+                        "schoolType": 9,
+                        "leisureSchool": 0,
+                        "class": "F35b",
+                        "orgId": 1,
+                        "tokenLogin": "https://sms1.schoolsoft.se/mock_school/jsp/app/TokenLogin.jsp?token=TOKEN_PLACEHOLDER&orgid=1&childid=1337&redirect=https%3A%2F%2Fsms1.schoolsoft.se%2mock_school%2Fjsp%2Fstudent%2Fright_student_startpage.jsp"
+                    }
+                ],
+                "type": 1,
+                "userId": 1337
+            }"#)
+            .create();
 
         let mut client = ClientBuilder::new().base_url(url).build();
 
@@ -75,9 +75,7 @@ mod login {
             .mock("POST", "/mock_school/rest/app/login")
             .with_status(401)
             .with_body(
-                r#"{
-            "error": "Invalid username or password"
-        }"#,
+                r#"{ "error": "Invalid username or password" }"#,
             )
             .create();
 
