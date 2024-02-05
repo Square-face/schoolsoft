@@ -21,6 +21,8 @@ pub struct Client {
 
     /// Some(user) if the client is logged in.
     /// None if the client is not logged in.
+    ///
+    /// Methods that require a logged in user will return an error if the user is not logged in.
     pub user: Option<user::User>,
 }
 
@@ -63,16 +65,6 @@ pub enum RequestError {
 /// ```
 /// # use schoolsoft::ClientBuilder;
 /// let client = ClientBuilder::new()
-///    .device_id("1234567890".to_string())
-///    .build();
-///
-/// assert_eq!(client.base_url(), "https://sms.schoolsoft.se");
-/// assert_eq!(client.device_id(), "1234567890");
-/// ```
-///
-/// ```
-/// # use schoolsoft::ClientBuilder;
-/// let client = ClientBuilder::new()
 ///   .base_url("https://example.com".to_string())
 ///   .device_id("1234567890".to_string())
 ///   .build();
@@ -93,6 +85,16 @@ pub enum RequestError {
 /// ```
 ///
 /// construct a client with a custom device_id
+///
+/// ```
+/// # use schoolsoft::ClientBuilder;
+/// let client = ClientBuilder::new()
+///    .device_id("1234567890".to_string())
+///    .build();
+///
+/// assert_eq!(client.base_url(), "https://sms.schoolsoft.se");
+/// assert_eq!(client.device_id(), "1234567890");
+/// ```
 ///
 ///
 /// construct a client with the default values
