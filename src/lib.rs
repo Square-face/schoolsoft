@@ -1,4 +1,5 @@
-pub mod types;
+pub mod user;
+pub mod school;
 
 /// Api client for the api used by schoolsofts app
 #[derive(Debug)]
@@ -15,27 +16,41 @@ pub struct Client {
     ///
     /// Requesting a token requires a device id. The id can be "" without causing any known issues.
     ///
-    /// Its presumablly used for logging and analytics.
+    /// Its presumablly used by schoolsoft for logging and analytics.
     device_id: String,
 
     /// Some(user) if the client is logged in.
     /// None if the client is not logged in.
-    pub user: Option<types::User>,
+    pub user: Option<user::User>,
 }
 
+/// Error type for requests.
+///
+/// This type is returned when a request fails.
 #[derive(Debug)]
 pub enum RequestError {
+    /// Error when sending the request.
     RequestError(reqwest::Error),
+
+    /// Error when reading the response.
     ReadError(reqwest::Error),
+
+    /// Error when parsing the response.
     ParseError(serde_json::Error),
+
+    /// The given credentials are invalid.
     InvalidCredentials,
+
+    /// An unknown error occurred.
     UnknownError,
+
+    /// An unchecked status code was returned.
     UncheckedCode(reqwest::StatusCode),
 }
 
 /// Client builder.
 ///
-/// Usefull for configuring the client.
+/// Useful for configuring the client.
 ///
 /// The default values are:
 /// - base_url: <https://sms.schoolsoft.se>
@@ -100,7 +115,7 @@ impl Client {
     /// Attempt to login with the given credentials.
     ///
     /// `school` is the [types::SchoolListing::url_name] of the school.
-    /// username and password are the same as when loging into the website or mobile app
+    /// username and password are the same as when logging into the website or mobile app
     ///
     /// # Arguments
     /// - username: The username to login with.
@@ -159,7 +174,7 @@ impl Client {
             Ok(contents) => contents,
         };
 
-        let user: types::User = match serde_json::from_str(&contents) {
+        let user: user::User = match serde_json::from_str(&contents) {
             Err(err) => return Err(RequestError::ParseError(err)),
             Ok(user) => user,
         };
@@ -167,6 +182,48 @@ impl Client {
         self.user = Some(user);
 
         Ok(())
+    }
+
+    /// Get list of schools.
+    ///
+    /// Returns every school currently available in the system.
+    ///
+    /// # Examples
+    /// ```
+    /// # use schoolsoft::ClientBuilder;
+    /// # use tokio::test;
+    /// # 
+    /// # #[test]
+    /// # async fn schools() {
+    /// let client = ClientBuilder::new()
+    ///   .build();
+    ///
+    /// let schools = client.schools().await;
+    /// # }
+    pub async fn schools(&self) -> Result<Vec<school::SchoolListing>, RequestError> {
+        let url = format!("{}/rest/app/schoollist/prod", self.base_url);
+
+        let response = match self.client.get(&url).send().await {
+            Err(err) => return Err(RequestError::RequestError(err)),
+            Ok(response) => response,
+        };
+
+        match response.status() {
+            reqwest::StatusCode::OK => (),
+            code => return Err(RequestError::UncheckedCode(code)),
+        }
+
+        let contents = match response.text().await {
+            Err(err) => return Err(RequestError::ReadError(err)),
+            Ok(contents) => contents,
+        };
+
+        let schools: Vec<school::SchoolListing> = match serde_json::from_str(&contents) {
+            Err(err) => return Err(RequestError::ParseError(err)),
+            Ok(schools) => schools,
+        };
+
+        Ok(schools)
     }
 
     /// Get the base url.
