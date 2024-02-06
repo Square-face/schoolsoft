@@ -49,25 +49,44 @@ pub struct Org {
     pub token_login: String,
 }
 
+/// A schoolsoft user
+///
+/// This struct represents a user of the schoolsoft system. It is deserialized from the JSON
+/// returned by the api when logging in.
 #[derive(Debug, Clone, Deserialize)]
 pub struct User {
+    /// Users full name
     pub name: String,
 
+    /// Url to the users profile picture
     #[serde(rename = "pictureUrl")]
     pub pictute_url: String,
 
+    /// If the user is over 18 (schoolsoft is swedish)
     #[serde(rename = "isOfAge")]
     pub is_of_age: bool,
 
+    /// The app key retrieved when logging in
     #[serde(rename = "appKey")]
     pub app_key: String,
+
+    /// Token used for interacting with api routes that require authentication
+    ///
+    /// This field is not populated by logging in. Instead it requires a separate request to
+    /// /<school>/rest/app/token with the app key.
+    ///
+    /// A token is valid for 3 hours after which it must be refreshed using another call.
     pub token: Option<String>,
 
+    /// What type of user this is
     #[serde(rename = "type")]
     pub user_type: UserType,
 
+    /// Unique identifier for the user
     #[serde(rename = "userId")]
     pub id: u32,
+
+    /// List of organizations that the user is a part of
     pub orgs: Vec<Org>,
 }
 
