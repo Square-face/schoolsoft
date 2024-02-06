@@ -9,20 +9,42 @@ pub enum UserType {
     Teacher = 3,
 }
 
+/// A schoolsoft organization
+///
+/// As there is no official documentation for the schoolsoft API. It is unclear what organizations
+/// even are. I assume that they are schools, but i only have one account to test with so i
+/// can't be sure.
+///
+/// All i know is that when logging in, the api responds with a list of organizations. But so far
+/// that list has only ever contained one singular organization with the same name as the school im
+/// attending.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Org {
+    /// Unique identifier for the organization
     #[serde(rename = "orgId")]
     pub id: u32,
+
+    /// Human readable name of the organization
     pub name: String,
+
+    /// Unknown
     pub blogger: bool,
 
+    /// Unknown
     #[serde(rename = "schoolType")]
     pub school_type: u32,
 
+    /// Unknown, also, why is it a number?
     #[serde(rename = "leisureSchool")]
     pub leisure_school: u32,
+
+    /// If we assume that this is a school, then this is the class that the user is attending
+    /// But what about teachers and parents? What does this field mean for them?
     pub class: String,
 
+    /// Url to login to the organization using a web browser
+    /// Once again, this field makes no since as you get it by logging in, so why would you need to
+    /// log in again?
     #[serde(rename = "tokenLogin")]
     pub token_login: String,
 }

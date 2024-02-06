@@ -118,7 +118,7 @@ pub struct ClientBuilder {
 impl Client {
     /// Attempt to login with the given credentials.
     ///
-    /// `school` is the [types::SchoolListing::url_name] of the school.
+    /// `school` is the [school::SchoolListing::url_name] of the school.
     /// username and password are the same as when logging into the website or mobile app
     ///
     /// # Arguments
