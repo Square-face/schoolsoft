@@ -1,10 +1,12 @@
-pub mod user;
 pub mod school;
+pub mod user;
 
 /// Api client for the api used by schoolsofts app
 #[derive(Debug)]
 pub struct Client {
+    /// Http client used for requests.
     client: reqwest::Client,
+
     /// Url to put before all requests.
     /// Default: <https://sms.schoolsoft.se>
     ///
@@ -125,6 +127,7 @@ impl Client {
     /// - school: The school to login to.
     ///
     /// # Examples
+    ///
     /// ```
     /// # use schoolsoft::ClientBuilder;
     /// # use tokio::test;
@@ -194,7 +197,7 @@ impl Client {
     /// ```
     /// # use schoolsoft::ClientBuilder;
     /// # use tokio::test;
-    /// # 
+    /// #
     /// # #[test]
     /// # async fn schools() {
     /// let client = ClientBuilder::new()
