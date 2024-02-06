@@ -9,6 +9,22 @@ pub enum UserType {
     Teacher = 3,
 }
 
+/// A schoolsoft token
+///
+/// A token is used to authenticate with the schoolsoft api. It is retrieved by logging in and
+/// making a request to /<school>/rest/app/token with the app key gained from the login.
+///
+/// While a appkey never changes, a token is only valid for 3 hours after which it must be
+/// refreshed using another call to /<school>/rest/app/token.
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+pub struct Token {
+    /// The token itself
+    pub token: String,
+
+    /// When the token expires
+    pub expires: chrono::DateTime<chrono::Utc>,
+}
+
 /// A schoolsoft organization
 ///
 /// As there is no official documentation for the schoolsoft API. It is unclear what organizations
@@ -74,9 +90,7 @@ pub struct User {
     ///
     /// This field is not populated by logging in. Instead it requires a separate request to
     /// /<school>/rest/app/token with the app key.
-    ///
-    /// A token is valid for 3 hours after which it must be refreshed using another call.
-    pub token: Option<String>,
+    pub token: Option<Token>,
 
     /// What type of user this is
     #[serde(rename = "type")]
