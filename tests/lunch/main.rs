@@ -16,7 +16,6 @@ async fn token_success() {
                 "token":"one_of_those_tokens"
             }"#,
         )
-        .expect(2) // the expiration date is in the past so when making the request it will try to
         // get a new token
         .create();
 
@@ -73,7 +72,6 @@ async fn token_success() {
         }],
     );
 
-    user.get_token().await.expect("Failed to get token");
     user.get_lunch().await.expect("Failed to get lunch");
 
     token_mock.assert();
