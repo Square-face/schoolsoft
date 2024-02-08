@@ -1,4 +1,5 @@
 use errors::{RequestError, SchoolError};
+use reqwest::StatusCode;
 use school::SchoolListing;
 
 pub mod errors;
@@ -114,7 +115,7 @@ impl Client {
     ///
     /// # #[test]
     /// # async fn login() {
-    /// let mut client = ClientBuilder::new()
+    /// let mut client = ClientBuilder: :new()
     ///    .build();
     ///
     /// client.login("username", "password", "school").await;
@@ -137,34 +138,32 @@ impl Client {
         params.insert("logintype", "4");
         params.insert("usertype", "1");
 
-        let request = self
+        let map_err = self
+            // build request
             .client
             .request(reqwest::Method::POST, url)
-            .form(&params);
+            .form(&params)
+            // send request
+            .send()
+            .await
+            // Check if the request was successful
+            .map_err(RequestError::RequestError)
+            // Check response code
+            .and_then(|response| match response.status() {
+                StatusCode::OK => Ok(response),
+                StatusCode::UNAUTHORIZED => Err(RequestError::InvalidCredentials),
+                code => Err(RequestError::UncheckedCode(code)),
+            })?
+            // Read response body
+            .text()
+            .await
+            // Check if the response body was read successfully
+            .map_err(RequestError::ReadError)?;
 
-        let response = match request.send().await {
-            Err(err) => return Err(RequestError::RequestError(err)),
-            Ok(response) => response,
-        };
-
-        match response.status() {
-            reqwest::StatusCode::OK => (),
-            reqwest::StatusCode::UNAUTHORIZED => return Err(RequestError::InvalidCredentials),
-            code => return Err(errors::RequestError::UncheckedCode(code)),
-        }
-
-        let contents = match response.text().await {
-            Err(err) => return Err(RequestError::ReadError(err)),
-            Ok(contents) => contents,
-        };
-
-        let user: user::User = match serde_json::from_str(&contents) {
-            Err(err) => return Err(RequestError::ParseError(err)),
-            Ok(user) => user,
-        };
+        // Parse response
+        let user: user::User = serde_json::from_str(&map_err).map_err(RequestError::ParseError)?;
 
         self.user = Some(user);
-
         Ok(())
     }
 
