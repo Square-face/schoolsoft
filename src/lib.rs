@@ -1,5 +1,3 @@
-use std::ops::Not;
-
 use errors::{RequestError, SchoolError};
 use school::SchoolListing;
 
