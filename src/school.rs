@@ -1,4 +1,4 @@
-use serde::de::{self, Deserializer, MapAccess, Visitor};
+use crate::errors::SchoolError;
 use serde::Deserialize;
 
 #[derive(Debug, Clone)]
@@ -16,112 +16,70 @@ pub struct SchoolListing {
     pub url_name: String,
 }
 
-impl<'de> Deserialize<'de> for SchoolListing {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct SchoolListingVisitor;
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+struct RawSchoolListing {
+    student_login_methods: String,
+    parent_login_methods: String,
+    teacher_login_methods: String,
+    name: String,
+    url: String,
+}
 
-        impl<'de> Visitor<'de> for SchoolListingVisitor {
-            type Value = SchoolListing;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("a map of strings")
+impl SchoolListing {
+    fn parse_methods(raw: &str) -> Result<Vec<u8>, SchoolError> {
+        let mut methods = Vec::new();
+        for method in raw.split(',') {
+            if method.is_empty() {
+                continue;
             }
-
-            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-            where
-                A: MapAccess<'de>,
-            {
-                // Initialize the fields with default values.
-                let mut student: Option<Vec<u8>> = None;
-                let mut parent: Option<Vec<u8>> = None;
-                let mut teacher: Option<Vec<u8>> = None;
-                let mut name: Option<String> = None;
-                let mut url: Option<String> = None;
-                let mut url_name: Option<String> = None;
-
-                // Iterate over the key-value pairs of the map.
-                while let Some(key) = map.next_key::<String>()? {
-                    match key.as_str() {
-                        "studentLoginMethods" => {
-                            student = Some(
-                                serde_json::from_str::<Vec<u8>>(&format!(
-                                    "[{}]",
-                                    &map.next_value::<String>()?
-                                ))
-                                .map_err(de::Error::custom)?,
-                            );
-                        }
-
-                        "parentLoginMethods" => {
-                            parent = Some(
-                                serde_json::from_str::<Vec<u8>>(&format!(
-                                    "[{}]",
-                                    &map.next_value::<String>()?
-                                ))
-                                .map_err(de::Error::custom)?,
-                            );
-                        }
-                        "teacherLoginMethods" => {
-                            teacher = Some(
-                                serde_json::from_str::<Vec<u8>>(&format!(
-                                    "[{}]",
-                                    &map.next_value::<String>()?
-                                ))
-                                .map_err(de::Error::custom)?,
-                            );
-                        }
-                        "name" => {
-                            name = Some(map.next_value()?);
-                        }
-                        "url" => {
-                            let temp: String = map.next_value()?;
-                            url = Some(temp.clone());
-
-                            // Extract the URL name from the URL.
-                            // Example: https://sms.schoolsoft.se/mock/ -> mock
-                            url_name = temp.split('/').nth_back(1).map(|s| s.to_string());
-                        }
-                        field => {
-                            let _ = map.next_value::<de::IgnoredAny>()?;
-                            return Err(de::Error::unknown_field(
-                                field,
-                                &[
-                                    "studentLoginMethods",
-                                    "parentLoginMethods",
-                                    "teacherLoginMethods",
-                                    "name",
-                                    "url",
-                                ],
-                            ));
-                        }
-                    }
-                }
-
-                // Ensure that all fields are initialized.
-                let login_methods = LoginMethods {
-                    student: student
-                        .ok_or_else(|| de::Error::missing_field("studentLoginMethods"))?,
-                    parent: parent.ok_or_else(|| de::Error::missing_field("parentLoginMethods"))?,
-                    teacher: teacher
-                        .ok_or_else(|| de::Error::missing_field("teacherLoginMethods"))?,
-                };
-                let name = name.ok_or_else(|| de::Error::missing_field("name"))?;
-                let url = url.ok_or_else(|| de::Error::missing_field("url"))?;
-                let url_name = url_name.ok_or_else(|| de::Error::missing_field("url"))?;
-
-                // Create and return the `SchoolListing`.
-                Ok(SchoolListing {
-                    login_methods,
-                    name,
-                    url,
-                    url_name,
-                })
-            }
+            methods.push(method.parse().map_err(SchoolError::ParseError)?);
         }
-        deserializer.deserialize_map(SchoolListingVisitor)
+
+        Ok(methods)
+    }
+
+    fn from_raw(raw_school: RawSchoolListing) -> Result<Self, SchoolError> {
+        let login_methods = LoginMethods {
+            student: Self::parse_methods(&raw_school.student_login_methods)?,
+            teacher: Self::parse_methods(&raw_school.teacher_login_methods)?,
+            parent: Self::parse_methods(&raw_school.parent_login_methods)?,
+        };
+
+        Ok(SchoolListing {
+            login_methods,
+            name: raw_school.name,
+            url_name: raw_school
+                .url
+                .split('/')
+                .nth_back(1)
+                .ok_or(SchoolError::BadUrl)?
+                .to_string(),
+            url: raw_school.url,
+        })
+    }
+
+    pub fn deserializer(json: &str) -> Result<Self, SchoolError> {
+        let raw_school_listing: RawSchoolListing =
+            serde_json::from_str(json).map_err(SchoolError::InvalidJson)?;
+
+        Self::from_raw(raw_school_listing)
+    }
+
+    pub fn deserialize_many(json: &str) -> Result<Vec<Self>, SchoolError> {
+        let raw_school_listings: Vec<RawSchoolListing> =
+            serde_json::from_str(json).map_err(SchoolError::InvalidJson)?;
+
+        let mut schools = Vec::new();
+
+        for raw_school in raw_school_listings {
+            let school = Self::from_raw(raw_school)?;
+
+            schools.push(school);
+        }
+
+        Ok(schools)
     }
 }
 
@@ -141,8 +99,8 @@ mod tests {
             }
         "#;
 
-        let school_listing: SchoolListing =
-            serde_json::from_str(json_data).expect("Failed to deserialize JSON");
+        let school_listing =
+            SchoolListing::deserializer(json_data).expect("Failed to deserialize JSON");
 
         assert_eq!(school_listing.name, "Mock School");
         assert_eq!(school_listing.url, "https://sms.schoolsoft.se/mock/");
@@ -166,7 +124,7 @@ mod tests {
             }
         "#;
 
-        let result: Result<SchoolListing, _> = serde_json::from_str(invalid_json);
+        let result = SchoolListing::deserializer(invalid_json);
 
         assert!(
             result.is_err(),

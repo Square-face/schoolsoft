@@ -1,7 +1,7 @@
 
 #[cfg(test)]
 mod login {
-    use schoolsoft::{user::UserType, ClientBuilder, RequestError};
+    use schoolsoft::{user::UserType, ClientBuilder, errors::RequestError};
     use tokio::test;
 
     #[test]

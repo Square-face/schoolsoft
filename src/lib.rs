@@ -1,3 +1,9 @@
+use std::ops::Not;
+
+use errors::{RequestError, SchoolError};
+use school::SchoolListing;
+
+pub mod errors;
 pub mod school;
 pub mod user;
 
@@ -26,30 +32,6 @@ pub struct Client {
     ///
     /// Methods that require a logged in user will return an error if the user is not logged in.
     pub user: Option<user::User>,
-}
-
-/// Error type for requests.
-///
-/// This type is returned when a request fails.
-#[derive(Debug)]
-pub enum RequestError {
-    /// Error when sending the request.
-    RequestError(reqwest::Error),
-
-    /// Error when reading the response.
-    ReadError(reqwest::Error),
-
-    /// Error when parsing the response.
-    ParseError(serde_json::Error),
-
-    /// The given credentials are invalid.
-    InvalidCredentials,
-
-    /// An unknown error occurred.
-    UnknownError,
-
-    /// An unchecked status code was returned.
-    UncheckedCode(reqwest::StatusCode),
 }
 
 /// Client builder.
@@ -171,7 +153,7 @@ impl Client {
         match response.status() {
             reqwest::StatusCode::OK => (),
             reqwest::StatusCode::UNAUTHORIZED => return Err(RequestError::InvalidCredentials),
-            code => return Err(RequestError::UncheckedCode(code)),
+            code => return Err(errors::RequestError::UncheckedCode(code)),
         }
 
         let contents = match response.text().await {
@@ -205,30 +187,28 @@ impl Client {
     ///
     /// let schools = client.schools().await;
     /// # }
-    pub async fn schools(&self) -> Result<Vec<school::SchoolListing>, RequestError> {
+    pub async fn schools(&self) -> Result<Vec<school::SchoolListing>, SchoolError> {
         let url = format!("{}/rest/app/schoollist/prod", self.base_url);
 
-        let response = match self.client.get(&url).send().await {
-            Err(err) => return Err(RequestError::RequestError(err)),
-            Ok(response) => response,
-        };
-
-        match response.status() {
-            reqwest::StatusCode::OK => (),
-            code => return Err(RequestError::UncheckedCode(code)),
-        }
-
-        let contents = match response.text().await {
-            Err(err) => return Err(RequestError::ReadError(err)),
-            Ok(contents) => contents,
-        };
-
-        let schools: Vec<school::SchoolListing> = match serde_json::from_str(&contents) {
-            Err(err) => return Err(RequestError::ParseError(err)),
-            Ok(schools) => schools,
-        };
-
-        Ok(schools)
+        SchoolListing::deserialize_many(
+            &self
+                .client
+                .get(&url)
+                .send()
+                .await
+                .map_err(SchoolError::RequestError)
+                .and_then(|response| {
+                    let code = response.status();
+                    response
+                        .status()
+                        .is_success()
+                        .then(|| response)
+                        .ok_or(SchoolError::UncheckedCode(code))
+                })?
+                .text()
+                .await
+                .map_err(SchoolError::ReadError)?,
+        )
     }
 
     /// Get the base url.
