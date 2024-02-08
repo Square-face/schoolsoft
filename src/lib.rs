@@ -129,7 +129,6 @@ impl Client {
     ) -> Result<(), RequestError> {
         // Construct url
         let url = format!("{}/{}/rest/app/login", self.base_url, school);
-        dbg!(&url);
 
         // Construct body
         let mut params = std::collections::HashMap::new();
