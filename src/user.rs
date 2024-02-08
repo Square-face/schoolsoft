@@ -1,4 +1,4 @@
-use serde::de::{MapAccess, Visitor};
+use serde::de::Error;
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 
@@ -95,6 +95,7 @@ pub struct User {
     ///
     /// This field is not populated by logging in. Instead it requires a separate request to
     /// /<school>/rest/app/token with the app key.
+    #[serde(skip_deserializing)]
     pub token: Option<Token>,
 
     /// What type of user this is
@@ -134,6 +135,44 @@ impl Token {
             token,
             expires,
         }
+    }
+
+    /// Deserialize a token from a JSON string
+    ///
+    /// # Example
+    /// ```
+    /// # use schoolsoft::user::Token;
+    /// let token = Token::deserialize(
+    ///   r#"{
+    ///    "expiryDate":"2024-01-01 12:00:00",
+    ///    "token":"notrealtoken123_1337_1"
+    ///    }"#,
+    /// ).expect("Failed to deserialize JSON");
+    ///
+    /// assert_eq!(token.token, "notrealtoken123_1337_1".to_string());
+    /// assert_eq!(token.expires, chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap().and_hms_opt(12, 0, 0).unwrap());
+    /// ```
+    pub fn deserialize(json: &str) -> Result<Token, serde_json::Error> {
+        #[derive(Deserialize)]
+        struct RawToken {
+            #[serde(rename = "expiryDate")]
+            expiry_date: String,
+            token: String,
+        }
+
+        let raw_token: RawToken = serde_json::from_str(json)?;
+
+        Ok(Token {
+            now: || chrono::Utc::now().naive_utc(),
+            token: raw_token.token,
+            expires: match chrono::NaiveDateTime::parse_from_str(
+                &raw_token.expiry_date,
+                "%Y-%m-%d %H:%M:%S%.f",
+            ) {
+                Ok(expires) => expires,
+                Err(err) => return Err(serde_json::Error::custom(err)),
+            },
+        })
     }
 
     /// Returns the duration until the token expires
@@ -189,74 +228,6 @@ impl Token {
     ///
     pub fn is_valid(&self) -> bool {
         !self.is_expired()
-    }
-}
-
-struct TokenVisitor;
-
-impl<'de> Visitor<'de> for TokenVisitor {
-    type Value = Token;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("a map of strings")
-    }
-
-    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-    where
-        A: MapAccess<'de>,
-    {
-        let mut token = Option::<String>::None;
-        let mut expires = Option::<chrono::NaiveDateTime>::None;
-
-        while let Some(key) = map.next_key::<String>()? {
-            match key.as_str() {
-                "token" => {
-                    token = Some(match map.next_value::<String>() {
-                        Ok(token) => token,
-                        Err(err) => return Err(err),
-                    });
-                }
-                "expiryDate" => {
-                    expires = Some(match map.next_value::<String>() {
-                        Ok(expires) => match chrono::NaiveDateTime::parse_from_str(
-                            &expires,
-                            "%Y-%m-%d %H:%M:%S%.f",
-                        ) {
-                            Ok(expires) => expires,
-                            Err(err) => return Err(serde::de::Error::custom(err)),
-                        },
-                        Err(err) => return Err(err),
-                    });
-                }
-                _ => {
-                    return Err(serde::de::Error::unknown_field(
-                        key.as_str(),
-                        &["token", "expiryDate"],
-                    ));
-                }
-            }
-        }
-
-        Ok(Token {
-            now: || chrono::Utc::now().naive_utc(),
-            token: match token {
-                Some(token) => token,
-                None => return Err(serde::de::Error::custom("Token is missing")),
-            },
-            expires: match expires {
-                Some(expires) => expires,
-                None => return Err(serde::de::Error::custom("Expires is missing")),
-            },
-        })
-    }
-}
-
-impl<'de> Deserialize<'de> for Token {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        deserializer.deserialize_map(TokenVisitor)
     }
 }
 
@@ -320,17 +291,9 @@ mod tests {
     mod token {
         use super::*;
 
-        /// Mock now function that returns a fixed date
-        fn now() -> chrono::NaiveDateTime {
-            chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
-                .unwrap()
-                .and_hms_opt(12, 0, 0)
-                .unwrap()
-        }
-
         #[test]
         fn valid_triple_decimal() {
-            let token: Token = serde_json::from_str(
+            let token = Token::deserialize(
                 r#"{
                     "expiryDate":"2024-01-01 12:00:00.123",
                     "token":"123notrealtoken123_1337_1"
@@ -339,7 +302,6 @@ mod tests {
             .expect("Failed to deserialize JSON with 3 decimal places");
 
             assert_eq!(token.token, "123notrealtoken123_1337_1".to_string());
-
             assert_eq!(
                 token.expires,
                 chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
@@ -352,40 +314,69 @@ mod tests {
 
         #[test]
         fn valid_double_decimal() {
-            let _: Token = serde_json::from_str(
+            let token = Token::deserialize(
                 r#"{
                     "expiryDate":"2024-02-06 21:37:15.15",
                     "token":"123notrealtoken123_1337_1"
                 }"#,
             )
             .expect("Failed to deserialize JSON with 2 decimal places");
+
+            assert_eq!(token.token, "123notrealtoken123_1337_1".to_string());
+            assert_eq!(
+                token.expires,
+                chrono::NaiveDate::from_ymd_opt(2024, 2, 6)
+                    .unwrap()
+                    .and_hms_opt(21, 37, 15)
+                    .unwrap()
+                    + chrono::Duration::milliseconds(150)
+            );
         }
 
         #[test]
         fn valid_single_decimal() {
-            let _: Token = serde_json::from_str(
+            let token = Token::deserialize(
                 r#"{
                     "expiryDate":"2024-02-06 21:37:15.1",
                     "token":"123notrealtoken123_1337_1"
                 }"#,
             )
             .expect("Failed to deserialize JSON with 1 decimal place");
+
+            assert_eq!(token.token, "123notrealtoken123_1337_1".to_string());
+            assert_eq!(
+                token.expires,
+                chrono::NaiveDate::from_ymd_opt(2024, 2, 6)
+                    .unwrap()
+                    .and_hms_opt(21, 37, 15)
+                    .unwrap()
+                    + chrono::Duration::milliseconds(100)
+            );
         }
 
         #[test]
         fn valid_no_decimal() {
-            let _: Token = serde_json::from_str(
+            let token = Token::deserialize(
                 r#"{
                     "expiryDate":"2024-02-06 21:37:15",
                     "token":"123notrealtoken123_1337_1"
                 }"#,
             )
             .expect("Failed to deserialize JSON with no decimal places");
+
+            assert_eq!(token.token, "123notrealtoken123_1337_1".to_string());
+            assert_eq!(
+                token.expires,
+                chrono::NaiveDate::from_ymd_opt(2024, 2, 6)
+                    .unwrap()
+                    .and_hms_opt(21, 37, 15)
+                    .unwrap()
+            );
         }
 
         #[test]
         fn expiration_in_1h() {
-            let mut token: Token = serde_json::from_str(
+            let mut token = Token::deserialize(
                 r#"{
                     "expiryDate":"2024-01-01 12:00:00",
                     "token":"123notrealtoken123_1337_1"
@@ -405,7 +396,7 @@ mod tests {
 
         #[test]
         fn expiration_in_1m() {
-            let mut token: Token = serde_json::from_str(
+            let mut token = Token::deserialize(
                 r#"{
                     "expiryDate":"2024-01-01 12:00:00",
                     "token":"123notrealtoken123_1337_1"
@@ -427,7 +418,7 @@ mod tests {
 
         #[test]
         fn expiration_now() {
-            let mut token: Token = serde_json::from_str(
+            let mut token = Token::deserialize(
                 r#"{
                     "expiryDate":"2024-01-01 12:00:00",
                     "token":"123notrealtoken123_1337_1"
@@ -449,7 +440,7 @@ mod tests {
 
         #[test]
         fn expiration_expired() {
-            let mut token: Token = serde_json::from_str(
+            let mut token = Token::deserialize(
                 r#"{
                     "expiryDate":"2024-01-01 12:00:00",
                     "token":"123notrealtoken123_1337_1"
