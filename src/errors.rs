@@ -1,11 +1,8 @@
-use std::num::ParseIntError;
-
-
 /// Error type for requests.
 ///
 /// This type is returned when a request fails.
 #[derive(Debug)]
-pub enum RequestError {
+pub enum RequestError<T> {
     /// Error when sending the request.
     RequestError(reqwest::Error),
 
@@ -13,7 +10,7 @@ pub enum RequestError {
     ReadError(reqwest::Error),
 
     /// Error when parsing the response.
-    ParseError(serde_json::Error),
+    ParseError(T),
 
     /// The given credentials are invalid.
     InvalidCredentials,
@@ -25,14 +22,9 @@ pub enum RequestError {
     UncheckedCode(reqwest::StatusCode),
 }
 
-
 #[derive(Debug)]
-pub enum SchoolError {
-    RequestError(reqwest::Error),
-    ReadError(reqwest::Error),
-    InvalidJson(serde_json::Error),
-    ParseError(ParseIntError),
+pub enum SchoolParseError {
     BadUrl,
-    UnknownError,
-    UncheckedCode(reqwest::StatusCode),
+    ParseError(std::num::ParseIntError),
+    InvalidJson(serde_json::Error),
 }

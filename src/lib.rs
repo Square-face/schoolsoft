@@ -1,10 +1,12 @@
-use errors::{RequestError, SchoolError};
-use reqwest::StatusCode;
+use std::num::ParseIntError;
+
+use errors::{RequestError, SchoolParseError};
 use school::SchoolListing;
 
 pub mod errors;
 pub mod school;
 pub mod user;
+mod utils;
 
 /// Api client for the api used by schoolsofts app
 #[derive(Debug)]
@@ -115,7 +117,7 @@ impl Client {
     ///
     /// # #[test]
     /// # async fn login() {
-    /// let mut client = ClientBuilder: :new()
+    /// let mut client = ClientBuilder::new()
     ///    .build();
     ///
     /// client.login("username", "password", "school").await;
@@ -127,7 +129,7 @@ impl Client {
         username: &str,
         password: &str,
         school: &str,
-    ) -> Result<(), RequestError> {
+    ) -> Result<(), RequestError<serde_json::Error>> {
         // Construct url
         let url = format!("{}/{}/rest/app/login", self.base_url, school);
 
@@ -149,11 +151,7 @@ impl Client {
             // Check if the request was successful
             .map_err(RequestError::RequestError)
             // Check response code
-            .and_then(|response| match response.status() {
-                StatusCode::OK => Ok(response),
-                StatusCode::UNAUTHORIZED => Err(RequestError::InvalidCredentials),
-                code => Err(RequestError::UncheckedCode(code)),
-            })?
+            .and_then(|response| utils::check_codes(response.status()).map_or(Ok(response), Err))?
             // Read response body
             .text()
             .await
@@ -183,7 +181,7 @@ impl Client {
     ///
     /// let schools = client.schools().await;
     /// # }
-    pub async fn schools(&self) -> Result<Vec<school::SchoolListing>, SchoolError> {
+    pub async fn schools(&self) -> Result<Vec<school::SchoolListing>, RequestError<SchoolParseError>> {
         let url = format!("{}/rest/app/schoollist/prod", self.base_url);
 
         SchoolListing::deserialize_many(
@@ -192,18 +190,18 @@ impl Client {
                 .get(&url)
                 .send()
                 .await
-                .map_err(SchoolError::RequestError)
+                .map_err(RequestError::RequestError)
                 .and_then(|response| {
                     let code = response.status();
                     response
                         .status()
                         .is_success()
                         .then(|| response)
-                        .ok_or(SchoolError::UncheckedCode(code))
+                        .ok_or(RequestError::UncheckedCode(code))
                 })?
                 .text()
                 .await
-                .map_err(SchoolError::ReadError)?,
+                .map_err(RequestError::ReadError)?,
         )
     }
 
