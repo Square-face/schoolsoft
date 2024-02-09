@@ -9,6 +9,16 @@ pub enum UserType {
     Parent = 2,
     Teacher = 3,
 }
+impl UserType {
+    fn from_u8(user_type: u8) -> Option<UserType> {
+        match user_type {
+            1 => Some(UserType::Student),
+            2 => Some(UserType::Parent),
+            3 => Some(UserType::Teacher),
+            _ => None,
+        }
+    }
+}
 
 /// A schoolsoft token
 ///
@@ -38,10 +48,9 @@ pub struct Token {
 /// All i know is that when logging in, the api responds with a list of organizations. But so far
 /// that list has only ever contained one singular organization with the same name as the school im
 /// attending.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Org {
     /// Unique identifier for the organization
-    #[serde(rename = "orgId")]
     pub id: u32,
 
     /// Human readable name of the organization
@@ -51,11 +60,9 @@ pub struct Org {
     pub blogger: bool,
 
     /// Unknown
-    #[serde(rename = "schoolType")]
     pub school_type: u32,
 
     /// Unknown, also, why is it a number?
-    #[serde(rename = "leisureSchool")]
     pub leisure_school: u32,
 
     /// If we assume that this is a school, then this is the class that the user is attending
@@ -66,7 +73,6 @@ pub struct Org {
     /// Once again, this field makes no since as you get it by logging in, so why would you need to
     /// log in again?
     /// And no its not the url for getting the token, that is /<school>/rest/app/token
-    #[serde(rename = "tokenLogin")]
     pub token_login: String,
 }
 
@@ -74,40 +80,93 @@ pub struct Org {
 ///
 /// This struct represents a user of the schoolsoft system. It is deserialized from the JSON
 /// returned by the api when logging in.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct User {
     /// Users full name
     pub name: String,
 
     /// Url to the users profile picture
-    #[serde(rename = "pictureUrl")]
     pub pictute_url: String,
 
     /// If the user is over 18 (schoolsoft is swedish)
-    #[serde(rename = "isOfAge")]
     pub is_of_age: bool,
 
     /// The app key retrieved when logging in
-    #[serde(rename = "appKey")]
     pub app_key: String,
 
     /// Token used for interacting with api routes that require authentication
     ///
     /// This field is not populated by logging in. Instead it requires a separate request to
     /// /<school>/rest/app/token with the app key.
-    #[serde(skip_deserializing)]
     pub token: Option<Token>,
 
     /// What type of user this is
-    #[serde(rename = "type")]
     pub user_type: UserType,
 
     /// Unique identifier for the user
-    #[serde(rename = "userId")]
     pub id: u32,
 
     /// List of organizations that the user is a part of
     pub orgs: Vec<Org>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+struct RawOrg {
+    pub name: String,
+    pub blogger: bool,
+    pub school_type: u32,
+    pub leisure_school: u32,
+    pub class: String,
+    pub org_id: u32,
+    pub token_login: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
+struct RawUser {
+    pub picture_url: String,
+    pub name: String,
+    pub is_of_age: bool,
+    pub app_key: String,
+    pub orgs: Vec<RawOrg>,
+    #[serde(rename = "type")]
+    pub user_type: u8,
+    pub user_id: u32,
+}
+
+impl User {
+    pub fn deserialize(json: &str) -> Result<User, serde_json::Error> {
+        let raw: RawUser = serde_json::from_str(json)?;
+
+        let orgs = raw
+            .orgs
+            .into_iter()
+            .map(|raw_org| Org {
+                id: raw_org.org_id,
+                name: raw_org.name,
+                blogger: raw_org.blogger,
+                school_type: raw_org.school_type,
+                leisure_school: raw_org.leisure_school,
+                class: raw_org.class,
+                token_login: raw_org.token_login,
+            })
+            .collect();
+
+        Ok(User {
+            name: raw.name,
+            pictute_url: raw.picture_url,
+            is_of_age: raw.is_of_age,
+            app_key: raw.app_key,
+            token: None,
+            user_type: UserType::from_u8(raw.user_type)
+                .ok_or(serde_json::Error::custom("Invalid user type"))?,
+            id: raw.user_id,
+            orgs,
+        })
+    }
 }
 
 impl Token {
@@ -260,7 +319,7 @@ mod tests {
                 "userId": 1337
             }"#;
 
-            let user: User = serde_json::from_str(json_data).expect("Failed to deserialize JSON");
+            let user = User::deserialize(json_data).expect("Failed to deserialize JSON");
 
             assert_eq!(user.name, "Mock User");
             assert_eq!(

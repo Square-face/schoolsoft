@@ -1,7 +1,6 @@
-
 #[cfg(test)]
 mod login {
-    use schoolsoft::{user::UserType, ClientBuilder, errors::RequestError};
+    use schoolsoft::{errors::RequestError, user::UserType, ClientBuilder};
     use tokio::test;
 
     #[test]
@@ -75,9 +74,7 @@ mod login {
         let mock = server
             .mock("POST", "/mock_school/rest/app/login")
             .with_status(401)
-            .with_body(
-                r#"{ "error": "Invalid username or password" }"#,
-            )
+            .with_body(r#"{ "error": "Invalid username or password" }"#)
             .create();
 
         let mut client = ClientBuilder::new().base_url(url).build();
@@ -105,9 +102,11 @@ mod schoollist {
 
         let url = server.url();
 
-        let mock = server.mock("GET", "/rest/app/schoollist/prod")
+        let mock = server
+            .mock("GET", "/rest/app/schoollist/prod")
             .with_status(200)
-            .with_body(r#"
+            .with_body(
+                r#"
             [
                 {
                     "studentLoginMethods": "0,1,2,3,4",
@@ -117,7 +116,8 @@ mod schoollist {
                     "url": "https://sms.schoolsoft.se/carlwahren/"
                 }
             ]
-            "#)
+            "#,
+            )
             .create();
 
         let client = ClientBuilder::new().base_url(url).build();
@@ -145,7 +145,8 @@ mod schoollist {
 
         let url = server.url();
 
-        let mock = server.mock("GET", "/rest/app/schoollist/prod")
+        let mock = server
+            .mock("GET", "/rest/app/schoollist/prod")
             .with_status(200)
             .with_body(include_str!("../hurl/school-list.json"))
             .create();

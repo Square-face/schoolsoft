@@ -2,8 +2,6 @@ use reqwest::StatusCode;
 
 use crate::errors::RequestError;
 
-pub enum Nothing {}
-
 pub fn check_codes<T>(code: StatusCode) -> Option<RequestError<T>> {
     if code.is_success() {
         return None;
@@ -13,5 +11,4 @@ pub fn check_codes<T>(code: StatusCode) -> Option<RequestError<T>> {
         StatusCode::UNAUTHORIZED => Some(RequestError::InvalidCredentials),
         _ => Some(RequestError::UncheckedCode(code)),
     }
-
 }

@@ -1,5 +1,3 @@
-use std::num::ParseIntError;
-
 use errors::{RequestError, SchoolParseError};
 use school::SchoolListing;
 
@@ -93,6 +91,7 @@ pub struct Client {
 /// assert_eq!(client.device_id(), "");
 /// ```
 ///
+#[derive(Default)]
 pub struct ClientBuilder {
     base_url: Option<String>,
     device_id: Option<String>,
@@ -159,7 +158,7 @@ impl Client {
             .map_err(RequestError::ReadError)?;
 
         // Parse response
-        let user: user::User = serde_json::from_str(&map_err).map_err(RequestError::ParseError)?;
+        let user = user::User::deserialize(&map_err).map_err(RequestError::ParseError)?;
 
         self.user = Some(user);
         Ok(())
@@ -181,7 +180,9 @@ impl Client {
     ///
     /// let schools = client.schools().await;
     /// # }
-    pub async fn schools(&self) -> Result<Vec<school::SchoolListing>, RequestError<SchoolParseError>> {
+    pub async fn schools(
+        &self,
+    ) -> Result<Vec<school::SchoolListing>, RequestError<SchoolParseError>> {
         let url = format!("{}/rest/app/schoollist/prod", self.base_url);
 
         SchoolListing::deserialize_many(
@@ -196,7 +197,7 @@ impl Client {
                     response
                         .status()
                         .is_success()
-                        .then(|| response)
+                        .then_some(response)
                         .ok_or(RequestError::UncheckedCode(code))
                 })?
                 .text()
@@ -285,15 +286,6 @@ impl ClientBuilder {
                 .unwrap_or("https://sms.schoolsoft.se".to_string()),
             device_id: self.device_id.unwrap_or("".to_string()),
             user: None,
-        }
-    }
-}
-
-impl Default for ClientBuilder {
-    fn default() -> Self {
-        Self {
-            base_url: None,
-            device_id: None,
         }
     }
 }
