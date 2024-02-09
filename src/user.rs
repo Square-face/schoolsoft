@@ -82,6 +82,8 @@ pub struct Org {
 /// returned by the api when logging in.
 #[derive(Debug, Clone)]
 pub struct User {
+    school_url: String,
+
     /// Users full name
     pub name: String,
 
@@ -138,7 +140,38 @@ struct RawUser {
 }
 
 impl User {
-    pub fn deserialize(json: &str) -> Result<User, serde_json::Error> {
+    /// Deserialize a user from a JSON String
+    ///
+    /// # Arguments
+    /// * `json` - A JSON string containing the user data
+    /// * `school_url` - The url of the school the user is logging in to
+    ///
+    /// # Example
+    /// ```
+    /// # use schoolsoft::user::User;
+    /// let user = User::deserialize(r#"{
+    ///     "pictureUrl": "pictureFile.jsp?studentId=1337",
+    ///     "name": "Mock User",
+    ///     "isOfAge": false,
+    ///     "appKey": "123notreal",
+    ///     "orgs": [
+    ///      {
+    ///          "name": "Mock School",
+    ///          "blogger": false,
+    ///          "schoolType": 9,
+    ///          "leisureSchool": 0,
+    ///          "class": "F35b",
+    ///          "orgId": 1,
+    ///          "tokenLogin": "https://sms1.schoolsoft.se/mock_school/jsp/app/TokenLogin.jsp?token=TOKEN_PLACEHOLDER&orgid=1&childid=1337&redirect=https%3A%2F%2Fsms1.schoolsoft.se%2mock_school%2Fjsp%2Fstudent%2Fright_student_startpage.jsp"
+    ///      }
+    ///      ],
+    ///      "type": 1,
+    ///      "userId": 1337
+    /// }"#,
+    /// "https://example.com/mock_school".to_string(),
+    /// ).expect("Failed to deserialize JSON");
+    /// ```
+    pub fn deserialize(json: &str, school_url: String) -> Result<User, serde_json::Error> {
         let raw: RawUser = serde_json::from_str(json)?;
 
         let orgs = raw
@@ -156,6 +189,7 @@ impl User {
             .collect();
 
         Ok(User {
+            school_url,
             name: raw.name,
             pictute_url: raw.picture_url,
             is_of_age: raw.is_of_age,
@@ -319,7 +353,7 @@ mod tests {
                 "userId": 1337
             }"#;
 
-            let user = User::deserialize(json_data).expect("Failed to deserialize JSON");
+            let user = User::deserialize(json_data, "https://example.com/mock_school".to_string()).expect("Failed to deserialize JSON");
 
             assert_eq!(user.name, "Mock User");
             assert_eq!(

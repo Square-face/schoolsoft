@@ -130,7 +130,8 @@ impl Client {
         school: &str,
     ) -> Result<(), RequestError<serde_json::Error>> {
         // Construct url
-        let url = format!("{}/{}/rest/app/login", self.base_url, school);
+        let school_url = format!("{}/{}", self.base_url, school);
+        let url = format!("{}/rest/app/login", school_url);
 
         // Construct body
         let mut params = std::collections::HashMap::new();
@@ -158,7 +159,7 @@ impl Client {
             .map_err(RequestError::ReadError)?;
 
         // Parse response
-        let user = user::User::deserialize(&map_err).map_err(RequestError::ParseError)?;
+        let user = user::User::deserialize(&map_err, school_url).map_err(RequestError::ParseError)?;
 
         self.user = Some(user);
         Ok(())
