@@ -11,8 +11,8 @@ appkey: jsonpath "$['appKey']"
 
 GET https://sms.schoolsoft.se/{{school}}/rest/app/token
 appkey: {{appkey}}
-appos: android
-appversion: 2.3.14
+# appos: android # aparently this is unecesary
+# appversion: 2.3.14 # this to
 deviceid: ''
 
 HTTP 200

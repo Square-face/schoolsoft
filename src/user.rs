@@ -2,6 +2,8 @@ use serde::de::Error;
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 
+use crate::errors::{RequestError, TokenError};
+
 #[derive(Debug, Clone, Deserialize_repr, PartialEq, Eq)]
 #[repr(u8)]
 pub enum UserType {
@@ -83,6 +85,7 @@ pub struct Org {
 #[derive(Debug, Clone)]
 pub struct User {
     school_url: String,
+    client: reqwest::Client,
 
     /// Users full name
     pub name: String,
@@ -190,6 +193,7 @@ impl User {
 
         Ok(User {
             school_url,
+            client: reqwest::Client::new(),
             name: raw.name,
             pictute_url: raw.picture_url,
             is_of_age: raw.is_of_age,
@@ -200,6 +204,38 @@ impl User {
             id: raw.user_id,
             orgs,
         })
+    }
+
+    /// Get a new token for the user
+    ///
+    /// This method uses the app key to get a new token from the schoolsoft api. The token is then
+    /// used to authenticate to the api when making other requests.
+    pub async fn get_token(&mut self) -> Result<(), RequestError<TokenError>> {
+        let url = format!("{}/rest/app/token", self.school_url);
+
+        self.token = Some(Token::deserialize(
+            &self
+                .client
+                .post(&url)
+                .header("appKey", &self.app_key)
+                .header("deviceid", "TempleOs")
+                .send()
+                .await
+                .map_err(RequestError::RequestError)
+                .and_then(|response| {
+                    let code = response.status();
+                    response
+                        .status()
+                        .is_success()
+                        .then_some(response)
+                        .ok_or(RequestError::UncheckedCode(code))
+                })?
+                .text()
+                .await
+                .map_err(RequestError::ReadError)?,
+        )
+        .map_err(RequestError::ParseError)?);
+        Ok(())
     }
 }
 
@@ -245,7 +281,7 @@ impl Token {
     /// assert_eq!(token.token, "notrealtoken123_1337_1".to_string());
     /// assert_eq!(token.expires, chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap().and_hms_opt(12, 0, 0).unwrap());
     /// ```
-    pub fn deserialize(json: &str) -> Result<Token, serde_json::Error> {
+    pub fn deserialize(json: &str) -> Result<Token, TokenError> {
         #[derive(Deserialize)]
         struct RawToken {
             #[serde(rename = "expiryDate")]
@@ -253,18 +289,16 @@ impl Token {
             token: String,
         }
 
-        let raw_token: RawToken = serde_json::from_str(json)?;
+        let raw_token: RawToken = serde_json::from_str(json).map_err(TokenError::InvalidJson)?;
 
         Ok(Token {
             now: || chrono::Utc::now().naive_utc(),
             token: raw_token.token,
-            expires: match chrono::NaiveDateTime::parse_from_str(
+            expires: chrono::NaiveDateTime::parse_from_str(
                 &raw_token.expiry_date,
                 "%Y-%m-%d %H:%M:%S%.f",
-            ) {
-                Ok(expires) => expires,
-                Err(err) => return Err(serde_json::Error::custom(err)),
-            },
+            )
+            .map_err(TokenError::InvalidTimestamp)?,
         })
     }
 
@@ -353,7 +387,8 @@ mod tests {
                 "userId": 1337
             }"#;
 
-            let user = User::deserialize(json_data, "https://example.com/mock_school".to_string()).expect("Failed to deserialize JSON");
+            let user = User::deserialize(json_data, "https://example.com/mock_school".to_string())
+                .expect("Failed to deserialize JSON");
 
             assert_eq!(user.name, "Mock User");
             assert_eq!(

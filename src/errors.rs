@@ -28,3 +28,9 @@ pub enum SchoolParseError {
     ParseError(std::num::ParseIntError),
     InvalidJson(serde_json::Error),
 }
+
+#[derive(Debug)]
+pub enum TokenError {
+    InvalidJson(serde_json::Error),
+    InvalidTimestamp(chrono::ParseError),
+}
