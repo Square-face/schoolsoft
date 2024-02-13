@@ -159,7 +159,8 @@ impl Client {
             .map_err(RequestError::ReadError)?;
 
         // Parse response
-        let user = user::User::deserialize(&map_err, school_url).map_err(RequestError::ParseError)?;
+        let user =
+            user::User::deserialize(&map_err, school_url).map_err(RequestError::ParseError)?;
 
         self.user = Some(user);
         Ok(())

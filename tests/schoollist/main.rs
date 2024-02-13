@@ -1,4 +1,3 @@
-
 use schoolsoft::ClientBuilder;
 use tokio::test;
 

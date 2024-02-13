@@ -213,28 +213,30 @@ impl User {
     pub async fn get_token(&mut self) -> Result<(), RequestError<TokenError>> {
         let url = format!("{}/rest/app/token", self.school_url);
 
-        self.token = Some(Token::deserialize(
-            &self
-                .client
-                .post(&url)
-                .header("appKey", &self.app_key)
-                .header("deviceid", "TempleOs")
-                .send()
-                .await
-                .map_err(RequestError::RequestError)
-                .and_then(|response| {
-                    let code = response.status();
-                    response
-                        .status()
-                        .is_success()
-                        .then_some(response)
-                        .ok_or(RequestError::UncheckedCode(code))
-                })?
-                .text()
-                .await
-                .map_err(RequestError::ReadError)?,
-        )
-        .map_err(RequestError::ParseError)?);
+        self.token = Some(
+            Token::deserialize(
+                &self
+                    .client
+                    .post(&url)
+                    .header("appKey", &self.app_key)
+                    .header("deviceid", "TempleOs")
+                    .send()
+                    .await
+                    .map_err(RequestError::RequestError)
+                    .and_then(|response| {
+                        let code = response.status();
+                        response
+                            .status()
+                            .is_success()
+                            .then_some(response)
+                            .ok_or(RequestError::UncheckedCode(code))
+                    })?
+                    .text()
+                    .await
+                    .map_err(RequestError::ReadError)?,
+            )
+            .map_err(RequestError::ParseError)?,
+        );
         Ok(())
     }
 }

@@ -44,8 +44,18 @@ async fn get_token() {
     user.get_token().await.expect("Failed to get token");
 
     user.token.clone().expect("Token not set");
-    assert_eq!(&(user.token.clone().unwrap().token), &"662a193b25bf2d38c75bb1b5f87d0562_3881_1");
-    assert_eq!(&(user.token.clone().unwrap().expires), &(NaiveDate::from_ymd_opt(2024, 02, 12).unwrap().and_hms_opt(17, 22, 23).unwrap() + Duration::milliseconds(714)));
+    assert_eq!(
+        &(user.token.clone().unwrap().token),
+        &"662a193b25bf2d38c75bb1b5f87d0562_3881_1"
+    );
+    assert_eq!(
+        &(user.token.clone().unwrap().expires),
+        &(NaiveDate::from_ymd_opt(2024, 02, 12)
+            .unwrap()
+            .and_hms_opt(17, 22, 23)
+            .unwrap()
+            + Duration::milliseconds(714))
+    );
 
     mock.assert();
 }
