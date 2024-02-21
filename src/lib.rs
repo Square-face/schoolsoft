@@ -140,27 +140,15 @@ impl Client {
         params.insert("logintype", "4");
         params.insert("usertype", "1");
 
-        let map_err = self
-            // build request
+        let request = self
             .client
             .request(reqwest::Method::POST, url)
-            .form(&params)
-            // send request
-            .send()
-            .await
-            // Check if the request was successful
-            .map_err(RequestError::RequestError)
-            // Check response code
-            .and_then(|response| utils::check_codes(response.status()).map_or(Ok(response), Err))?
-            // Read response body
-            .text()
-            .await
-            // Check if the response body was read successfully
-            .map_err(RequestError::ReadError)?;
+            .form(&params);
+
+        let data = utils::make_request(request).await?;
 
         // Parse response
-        let user =
-            user::User::deserialize(&map_err, school_url).map_err(RequestError::ParseError)?;
+        let user = user::User::deserialize(&data, school_url).map_err(RequestError::ParseError)?;
 
         self.user = Some(user);
         Ok(())
@@ -187,25 +175,9 @@ impl Client {
     ) -> Result<Vec<school::SchoolListing>, RequestError<SchoolParseError>> {
         let url = format!("{}/rest/app/schoollist/prod", self.base_url);
 
-        SchoolListing::deserialize_many(
-            &self
-                .client
-                .get(&url)
-                .send()
-                .await
-                .map_err(RequestError::RequestError)
-                .and_then(|response| {
-                    let code = response.status();
-                    response
-                        .status()
-                        .is_success()
-                        .then_some(response)
-                        .ok_or(RequestError::UncheckedCode(code))
-                })?
-                .text()
-                .await
-                .map_err(RequestError::ReadError)?,
-        )
+        let response = utils::make_request(self.client.get(&url)).await?;
+
+        SchoolListing::deserialize_many(&response)
     }
 
     /// Get the base url.

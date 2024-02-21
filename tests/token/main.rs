@@ -1,9 +1,12 @@
 use chrono::{Duration, NaiveDate};
-use schoolsoft::user::User;
+use schoolsoft::{
+    errors::RequestError,
+    user::{User, UserType},
+};
 use tokio::test;
 
 #[test]
-async fn get_token() {
+async fn token_success() {
     let mut server = mockito::Server::new();
 
     let url = server.url();
@@ -18,28 +21,17 @@ async fn get_token() {
             }"#,
         )
         .create();
-    let mut user = User::deserialize(
-        r#"{
-            "pictureUrl": "pictureFile.jsp?studentId=1337",
-            "name": "Mock User",
-            "isOfAge": false,
-            "appKey": "123notreal",
-            "orgs": [
-             {
-                 "name": "Mock School",
-                 "blogger": false,
-                 "schoolType": 9,
-                 "leisureSchool": 0,
-                 "class": "F35b",
-                 "orgId": 1,
-                 "tokenLogin": "https://sms1.schoolsoft.se/mock_school/jsp/app/TokenLogin.jsp?token=TOKEN_PLACEHOLDER&orgid=1&childid=1337&redirect=https%3A%2F%2Fsms1.schoolsoft.se%2mock_school%2Fjsp%2Fstudent%2Fright_student_startpage.jsp"
-             }
-             ],
-             "type": 1,
-             "userId": 1337
-        }"#,
+
+    let mut user = User::new(
         format!("{}/mock_school", url),
-    ).expect("Failed to deserialize user");
+        "mock_user".to_string(),
+        "https://example.com/image".to_string(),
+        false,
+        "123notreal".to_string(),
+        UserType::Student,
+        1337,
+        vec![],
+    );
 
     user.get_token().await.expect("Failed to get token");
 
@@ -56,6 +48,38 @@ async fn get_token() {
             .unwrap()
             + Duration::milliseconds(714))
     );
+
+    mock.assert();
+}
+
+#[test]
+async fn token_bad_auth() {
+    let mut server = mockito::Server::new();
+
+    let url = server.url();
+
+    let mock = server
+        .mock("POST", "/mock_school/rest/app/token")
+        .with_status(401)
+        .create();
+
+    let mut user = User::new(
+        format!("{}/mock_school", url),
+        "mock_user".to_string(),
+        "https://example.com/image".to_string(),
+        false,
+        "123notreal".to_string(),
+        UserType::Student,
+        1337,
+        vec![],
+    );
+
+    let result = user.get_token().await;
+
+    match result {
+        Err(RequestError::Unauthorized) => {}
+        _ => panic!("Expected Unauthorized, got {:?}", result),
+    }
 
     mock.assert();
 }

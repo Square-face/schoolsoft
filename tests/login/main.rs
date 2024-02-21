@@ -81,7 +81,7 @@ async fn failure() {
 
     match response.await {
         Ok(_) => panic!("Expected error"),
-        Err(RequestError::InvalidCredentials) => (),
+        Err(RequestError::Unauthorized) => (),
         Err(_) => panic!("Unexpected error"),
     }
 

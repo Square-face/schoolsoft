@@ -1,3 +1,4 @@
+use chrono::Duration;
 use serde::de::Error;
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
@@ -143,6 +144,30 @@ struct RawUser {
 }
 
 impl User {
+    pub fn new(
+        school_url: String,
+        name: String,
+        pictute_url: String,
+        is_of_age: bool,
+        app_key: String,
+        user_type: UserType,
+        id: u32,
+        orgs: Vec<Org>,
+    ) -> Self {
+        Self {
+            school_url,
+            client: reqwest::Client::new(),
+            name,
+            pictute_url,
+            is_of_age,
+            app_key,
+            token: None,
+            user_type,
+            id,
+            orgs,
+        }
+    }
+
     /// Deserialize a user from a JSON String
     ///
     /// # Arguments
@@ -210,34 +235,32 @@ impl User {
     ///
     /// This method uses the app key to get a new token from the schoolsoft api. The token is then
     /// used to authenticate to the api when making other requests.
-    pub async fn get_token(&mut self) -> Result<(), RequestError<TokenError>> {
+    pub async fn get_token(&mut self) -> Result<String, RequestError<TokenError>> {
         let url = format!("{}/rest/app/token", self.school_url);
 
-        self.token = Some(
-            Token::deserialize(
-                &self
-                    .client
-                    .post(&url)
-                    .header("appKey", &self.app_key)
-                    .header("deviceid", "TempleOs")
-                    .send()
-                    .await
-                    .map_err(RequestError::RequestError)
-                    .and_then(|response| {
-                        let code = response.status();
-                        response
-                            .status()
-                            .is_success()
-                            .then_some(response)
-                            .ok_or(RequestError::UncheckedCode(code))
-                    })?
-                    .text()
-                    .await
-                    .map_err(RequestError::ReadError)?,
-            )
-            .map_err(RequestError::ParseError)?,
-        );
-        Ok(())
+        let request = self
+            .client
+            .post(&url)
+            .header("appKey", &self.app_key)
+            .header("deviceid", "TempleOs");
+
+        let response = crate::utils::make_request(request).await?;
+
+        let token = Token::deserialize(&response).map_err(RequestError::ParseError)?;
+
+        self.token = Some(token.clone());
+
+        Ok(token.token)
+    }
+
+    /// Get a token for the user
+    ///
+    /// This method returns the saved token if it is still valid, otherwise it gets a new token
+    pub async fn smart_token(&mut self) -> Result<String, RequestError<TokenError>> {
+        match &self.token {
+            Some(token) if token.is_safe() => Ok(token.token.clone()),
+            _ => self.get_token().await,
+        }
     }
 }
 
@@ -319,7 +342,7 @@ impl Token {
     /// assert_eq!(token.expires_in(), Duration::hours(1));
     /// ```
     ///
-    pub fn expires_in(&self) -> chrono::Duration {
+    pub fn expires_in(&self) -> Duration {
         self.expires - (self.now)()
     }
 
@@ -357,6 +380,35 @@ impl Token {
     ///
     pub fn is_valid(&self) -> bool {
         !self.is_expired()
+    }
+
+    /// Check if the token is safe to use
+    ///
+    /// This method returns true if the token has more than 1 minute left until it expires
+    ///
+    /// # Example
+    /// Token with more than 1 minute left
+    /// ```
+    /// # use schoolsoft::user::Token;
+    /// let token = Token::new_with_now(
+    ///  "notrealtoken123_1337_1".to_string(),
+    ///  chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap().and_hms_opt(12, 0, 0).unwrap(),
+    ///  || chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap().and_hms_opt(11, 0, 0).unwrap(),
+    /// );
+    /// assert!(token.is_safe());
+    /// ```
+    /// Token with 30 sec left will return false
+    /// ```
+    /// # use schoolsoft::user::Token;
+    /// let token = Token::new_with_now(
+    ///  "notrealtoken123_1337_1".to_string(),
+    ///  chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap().and_hms_opt(12, 0, 0).unwrap(),
+    ///  || chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap().and_hms_opt(11, 59, 30).unwrap(),
+    /// );
+    /// assert_eq!(token.is_safe(), false);
+    /// ```
+    pub fn is_safe(&self) -> bool {
+        self.expires_in() > Duration::minutes(1)
     }
 }
 

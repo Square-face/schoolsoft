@@ -13,7 +13,10 @@ pub enum RequestError<T> {
     ParseError(T),
 
     /// The given credentials are invalid.
-    InvalidCredentials,
+    Unauthorized,
+
+    /// Something went wrong on the server.
+    InternalServerError,
 
     /// An unknown error occurred.
     UnknownError,
