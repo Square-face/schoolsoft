@@ -53,7 +53,7 @@ async fn full() {
     let mock = server
         .mock("GET", "/rest/app/schoollist/prod")
         .with_status(200)
-        .with_body(include_str!("../../hurl/school-list.json"))
+        .with_body(include_str!("../../hurl/output/school-list.json"))
         .create();
 
     let client = ClientBuilder::new().base_url(url).build();
