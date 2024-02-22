@@ -30,3 +30,11 @@ macro_rules! url {
     };
 }
 
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_macro() {
+        let base = "https://example.com";
+        assert_eq!(url!(base, test), "https://example.com/rest/app/test");
+    }
+}
