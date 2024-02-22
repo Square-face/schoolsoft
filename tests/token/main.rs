@@ -1,6 +1,6 @@
 use chrono::{Duration, NaiveDate};
 use schoolsoft::{
-    errors::RequestError,
+    errors::{RequestError, TokenError},
     user::{User, UserType},
 };
 use tokio::test;
@@ -25,8 +25,6 @@ async fn token_success() {
     let mut user = User::new(
         format!("{}/mock_school", url),
         "mock_user".to_string(),
-        "https://example.com/image".to_string(),
-        false,
         "123notreal".to_string(),
         UserType::Student,
         1337,
@@ -66,8 +64,6 @@ async fn token_bad_auth() {
     let mut user = User::new(
         format!("{}/mock_school", url),
         "mock_user".to_string(),
-        "https://example.com/image".to_string(),
-        false,
         "123notreal".to_string(),
         UserType::Student,
         1337,
@@ -77,7 +73,7 @@ async fn token_bad_auth() {
     let result = user.get_token().await;
 
     match result {
-        Err(RequestError::Unauthorized) => {}
+        Err(TokenError::RequestError(RequestError::Unauthorized)) => {}
         _ => panic!("Expected Unauthorized, got {:?}", result),
     }
 

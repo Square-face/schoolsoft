@@ -3,7 +3,7 @@ use serde::de::Error;
 use serde::Deserialize;
 use serde_repr::Deserialize_repr;
 
-use crate::errors::{RequestError, TokenError};
+use crate::{errors::TokenError, url};
 
 #[derive(Debug, Clone, Deserialize_repr, PartialEq, Eq)]
 #[repr(u8)]
@@ -147,8 +147,6 @@ impl User {
     pub fn new(
         school_url: String,
         name: String,
-        pictute_url: String,
-        is_of_age: bool,
         app_key: String,
         user_type: UserType,
         id: u32,
@@ -158,8 +156,8 @@ impl User {
             school_url,
             client: reqwest::Client::new(),
             name,
-            pictute_url,
-            is_of_age,
+            pictute_url: String::new(),
+            is_of_age: false,
             app_key,
             token: None,
             user_type,
@@ -235,18 +233,18 @@ impl User {
     ///
     /// This method uses the app key to get a new token from the schoolsoft api. The token is then
     /// used to authenticate to the api when making other requests.
-    pub async fn get_token(&mut self) -> Result<String, RequestError<TokenError>> {
-        let url = format!("{}/rest/app/token", self.school_url);
-
+    pub async fn get_token(&mut self) -> Result<String, TokenError> {
         let request = self
             .client
-            .post(&url)
+            .post(url!(self.school_url, token))
             .header("appKey", &self.app_key)
             .header("deviceid", "TempleOs");
 
-        let response = crate::utils::make_request(request).await?;
+        let response = crate::utils::make_request(request)
+            .await
+            .map_err(TokenError::RequestError)?;
 
-        let token = Token::deserialize(&response).map_err(RequestError::ParseError)?;
+        let token = Token::deserialize(&response).map_err(TokenError::ParseError)?;
 
         self.token = Some(token.clone());
 
@@ -256,7 +254,7 @@ impl User {
     /// Get a token for the user
     ///
     /// This method returns the saved token if it is still valid, otherwise it gets a new token
-    pub async fn smart_token(&mut self) -> Result<String, RequestError<TokenError>> {
+    pub async fn smart_token(&mut self) -> Result<String, TokenError> {
         match &self.token {
             Some(token) if token.is_safe() => Ok(token.token.clone()),
             _ => self.get_token().await,
@@ -306,7 +304,7 @@ impl Token {
     /// assert_eq!(token.token, "notrealtoken123_1337_1".to_string());
     /// assert_eq!(token.expires, chrono::NaiveDate::from_ymd_opt(2024, 1, 1).unwrap().and_hms_opt(12, 0, 0).unwrap());
     /// ```
-    pub fn deserialize(json: &str) -> Result<Token, TokenError> {
+    pub fn deserialize(json: &str) -> Result<Token, serde_json::Error> {
         #[derive(Deserialize)]
         struct RawToken {
             #[serde(rename = "expiryDate")]
@@ -314,7 +312,7 @@ impl Token {
             token: String,
         }
 
-        let raw_token: RawToken = serde_json::from_str(json).map_err(TokenError::InvalidJson)?;
+        let raw_token: RawToken = serde_json::from_str(json)?;
 
         Ok(Token {
             now: || chrono::Utc::now().naive_utc(),
@@ -323,7 +321,7 @@ impl Token {
                 &raw_token.expiry_date,
                 "%Y-%m-%d %H:%M:%S%.f",
             )
-            .map_err(TokenError::InvalidTimestamp)?,
+            .map_err(serde_json::Error::custom)?,
         })
     }
 

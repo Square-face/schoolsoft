@@ -1,4 +1,4 @@
-use errors::{RequestError, SchoolParseError};
+use errors::{LoginError, SchoolListingError};
 use school::SchoolListing;
 
 pub mod errors;
@@ -128,7 +128,7 @@ impl Client {
         username: &str,
         password: &str,
         school: &str,
-    ) -> Result<(), RequestError<serde_json::Error>> {
+    ) -> Result<(), LoginError> {
         // Construct url
         let school_url = format!("{}/{}", self.base_url, school);
         let url = format!("{}/rest/app/login", school_url);
@@ -145,10 +145,10 @@ impl Client {
             .request(reqwest::Method::POST, url)
             .form(&params);
 
-        let data = utils::make_request(request).await?;
+        let data = utils::make_request(request).await.map_err(LoginError::RequestError)?;
 
         // Parse response
-        let user = user::User::deserialize(&data, school_url).map_err(RequestError::ParseError)?;
+        let user = user::User::deserialize(&data, school_url).map_err(LoginError::ParseError)?;
 
         self.user = Some(user);
         Ok(())
@@ -170,12 +170,12 @@ impl Client {
     ///
     /// let schools = client.schools().await;
     /// # }
-    pub async fn schools(
-        &self,
-    ) -> Result<Vec<school::SchoolListing>, RequestError<SchoolParseError>> {
+    pub async fn schools(&self) -> Result<Vec<school::SchoolListing>, SchoolListingError> {
         let url = format!("{}/rest/app/schoollist/prod", self.base_url);
 
-        let response = utils::make_request(self.client.get(&url)).await?;
+        let response = utils::make_request(self.client.get(&url))
+            .await
+            .map_err(SchoolListingError::RequestError)?;
 
         SchoolListing::deserialize_many(&response)
     }

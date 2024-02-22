@@ -2,7 +2,7 @@ use reqwest::StatusCode;
 
 use crate::errors::RequestError;
 
-pub fn check_codes<T>(code: StatusCode) -> Result<(), RequestError<T>> {
+pub fn check_codes(code: StatusCode) -> Result<(), RequestError> {
     if code.is_success() {
         return Ok(());
     }
@@ -14,7 +14,7 @@ pub fn check_codes<T>(code: StatusCode) -> Result<(), RequestError<T>> {
     }
 }
 
-pub async fn make_request<T>(regeuest: reqwest::RequestBuilder) -> Result<String, RequestError<T>> {
+pub async fn make_request(regeuest: reqwest::RequestBuilder) -> Result<String, RequestError> {
     let response = regeuest.send().await.map_err(RequestError::RequestError)?;
     let code = response.status();
     check_codes(code)?;
@@ -22,3 +22,11 @@ pub async fn make_request<T>(regeuest: reqwest::RequestBuilder) -> Result<String
     let data = response.text().await.map_err(RequestError::ReadError)?;
     Ok(data)
 }
+
+#[macro_export]
+macro_rules! url {
+    ($base:expr, $path:ident) => {
+        format!("{}/rest/app/{}", $base, stringify!($path))
+    };
+}
+

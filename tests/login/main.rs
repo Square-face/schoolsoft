@@ -1,4 +1,4 @@
-use schoolsoft::{errors::RequestError, user::UserType, ClientBuilder};
+use schoolsoft::{errors::{LoginError, RequestError}, user::UserType, ClientBuilder};
 use tokio::test;
 
 #[test]
@@ -81,7 +81,7 @@ async fn failure() {
 
     match response.await {
         Ok(_) => panic!("Expected error"),
-        Err(RequestError::Unauthorized) => (),
+        Err(LoginError::RequestError(RequestError::Unauthorized)) => (),
         Err(_) => panic!("Unexpected error"),
     }
 
