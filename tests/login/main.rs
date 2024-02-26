@@ -1,4 +1,10 @@
-use schoolsoft::{errors::{LoginError, RequestError}, user::UserType, ClientBuilder};
+use schoolsoft::{
+    types::{
+        error::{LoginError, RequestError},
+        UserType,
+    },
+    ClientBuilder,
+};
 use tokio::test;
 
 #[test]

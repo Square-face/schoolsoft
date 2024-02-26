@@ -1,7 +1,7 @@
 use chrono::{Duration, NaiveDate};
 use schoolsoft::{
-    errors::{RequestError, TokenError},
-    user::{User, UserType},
+    types::error::{RequestError, TokenError},
+    types::{User, UserType},
 };
 use tokio::test;
 

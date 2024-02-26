@@ -1,21 +1,7 @@
+
+use crate::types::error;
 use serde::{de::Error, Deserialize};
-
-use crate::errors::SchoolListingError;
-
-#[derive(Debug, Clone)]
-pub struct LoginMethods {
-    pub student: Vec<u8>,
-    pub teacher: Vec<u8>,
-    pub parent: Vec<u8>,
-}
-
-#[derive(Debug, Clone)]
-pub struct SchoolListing {
-    pub login_methods: LoginMethods,
-    pub name: String,
-    pub url: String,
-    pub url_name: String,
-}
+use crate::types::{SchoolListing, LoginMethods};
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,8 +14,9 @@ struct RawSchoolListing {
     url: String,
 }
 
+
 impl SchoolListing {
-    fn parse_methods(raw: &str) -> Result<Vec<u8>, SchoolListingError> {
+    fn parse_methods(raw: &str) -> Result<Vec<u8>, error::SchoolListingError> {
         let mut methods = Vec::new();
         for method in raw.split(',') {
             if method.is_empty() {
@@ -39,14 +26,14 @@ impl SchoolListing {
                 method
                     .parse()
                     .map_err(serde_json::Error::custom)
-                    .map_err(SchoolListingError::ParseError)?,
+                    .map_err(error::SchoolListingError::ParseError)?,
             );
         }
 
         Ok(methods)
     }
 
-    fn from_raw(raw_school: RawSchoolListing) -> Result<Self, SchoolListingError> {
+    fn from_raw(raw_school: RawSchoolListing) -> Result<Self, error::SchoolListingError> {
         let login_methods = LoginMethods {
             student: Self::parse_methods(&raw_school.student_login_methods)?,
             teacher: Self::parse_methods(&raw_school.teacher_login_methods)?,
@@ -60,22 +47,22 @@ impl SchoolListing {
                 .url
                 .split('/')
                 .nth_back(1)
-                .ok_or(SchoolListingError::BadUrl)?
+                .ok_or(error::SchoolListingError::BadUrl)?
                 .to_string(),
             url: raw_school.url,
         })
     }
 
-    pub fn deserializer(json: &str) -> Result<Self, SchoolListingError> {
+    pub fn deserializer(json: &str) -> Result<Self, error::SchoolListingError> {
         let raw_school_listing: RawSchoolListing =
-            serde_json::from_str(json).map_err(SchoolListingError::ParseError)?;
+            serde_json::from_str(json).map_err(error::SchoolListingError::ParseError)?;
 
         Self::from_raw(raw_school_listing)
     }
 
-    pub fn deserialize_many(json: &str) -> Result<Vec<Self>, SchoolListingError> {
+    pub fn deserialize_many(json: &str) -> Result<Vec<Self>, error::SchoolListingError> {
         let raw_school_listings: Vec<RawSchoolListing> =
-            serde_json::from_str(json).map_err(SchoolListingError::ParseError)?;
+            serde_json::from_str(json).map_err(error::SchoolListingError::ParseError)?;
 
         let mut schools = Vec::new();
 

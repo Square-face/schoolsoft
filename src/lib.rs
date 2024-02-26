@@ -1,10 +1,11 @@
-use errors::{LoginError, SchoolListingError};
-use school::SchoolListing;
+use crate::types::User;
+use crate::types::SchoolListing;
+use crate::types::error;
 
-pub mod errors;
-pub mod school;
-pub mod user;
+pub mod types;
+mod user;
 mod utils;
+mod deserializers;
 
 /// Api client for the api used by schoolsofts app
 #[derive(Debug)]
@@ -30,7 +31,7 @@ pub struct Client {
     /// None if the client is not logged in.
     ///
     /// Methods that require a logged in user will return an error if the user is not logged in.
-    pub user: Option<user::User>,
+    pub user: Option<User>,
 }
 
 /// Client builder.
@@ -128,7 +129,7 @@ impl Client {
         username: &str,
         password: &str,
         school: &str,
-    ) -> Result<(), LoginError> {
+    ) -> Result<(), error::LoginError> {
         // Construct url
         let school_url = format!("{}/{}", self.base_url, school);
         let url = format!("{}/rest/app/login", school_url);
@@ -145,10 +146,10 @@ impl Client {
             .request(reqwest::Method::POST, url)
             .form(&params);
 
-        let data = utils::make_request(request).await.map_err(LoginError::RequestError)?;
+        let data = utils::make_request(request).await.map_err(error::LoginError::RequestError)?;
 
         // Parse response
-        let user = user::User::deserialize(&data, school_url).map_err(LoginError::ParseError)?;
+        let user = User::deserialize(&data, school_url).map_err(error::LoginError::ParseError)?;
 
         self.user = Some(user);
         Ok(())
@@ -170,12 +171,12 @@ impl Client {
     ///
     /// let schools = client.schools().await;
     /// # }
-    pub async fn schools(&self) -> Result<Vec<school::SchoolListing>, SchoolListingError> {
+    pub async fn schools(&self) -> Result<Vec<SchoolListing>, error::SchoolListingError> {
         let url = format!("{}/rest/app/schoollist/prod", self.base_url);
 
         let response = utils::make_request(self.client.get(&url))
             .await
-            .map_err(SchoolListingError::RequestError)?;
+            .map_err(error::SchoolListingError::RequestError)?;
 
         SchoolListing::deserialize_many(&response)
     }

@@ -1,6 +1,6 @@
+use crate::types::error::RequestError;
 use reqwest::StatusCode;
 
-use crate::errors::RequestError;
 
 pub fn check_codes(code: StatusCode) -> Result<(), RequestError> {
     if code.is_success() {
@@ -23,12 +23,14 @@ pub async fn make_request(regeuest: reqwest::RequestBuilder) -> Result<String, R
     Ok(data)
 }
 
+
 #[macro_export]
 macro_rules! url {
     ($base:expr, $path:ident) => {
         format!("{}/rest/app/{}", $base, stringify!($path))
     };
 }
+
 
 #[cfg(test)]
 mod tests {
