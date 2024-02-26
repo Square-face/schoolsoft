@@ -1,5 +1,8 @@
 use serde_repr::Deserialize_repr;
 
+/// The type of user
+///
+/// This enum represents the different types of users that can be logged in to schoolsoft.
 #[derive(Debug, Clone, Deserialize_repr, PartialEq, Eq)]
 #[repr(u8)]
 pub enum UserType {
@@ -101,6 +104,12 @@ pub struct User {
     pub orgs: Vec<Org>,
 }
 
+/// The login methods available for a school
+///
+/// Represented as an array of numbers. If the number for a login method is present in the array,
+/// its available.
+///
+/// For the app api to work 4 must be present.
 #[derive(Debug, Clone)]
 pub struct LoginMethods {
     pub student: Vec<u8>,
@@ -108,12 +117,33 @@ pub struct LoginMethods {
     pub parent: Vec<u8>,
 }
 
+/// A schoolsoft school
 #[derive(Debug, Clone)]
 pub struct SchoolListing {
     pub login_methods: LoginMethods,
     pub name: String,
     pub url: String,
     pub url_name: String,
+}
+
+/// Represents a specific weeks lunch menu
+#[derive(Debug, Clone)]
+pub struct LunchMenu {
+    pub week: u32,
+    pub created_at: chrono::NaiveDateTime,
+    pub category: String,
+    pub monday: Lunch,
+    pub tuesday: Lunch,
+    pub wednesday: Lunch,
+    pub thursday: Lunch,
+    pub friday: Lunch,
+}
+
+/// Represents a specific days lunch
+#[derive(Debug, Clone)]
+pub struct Lunch {
+    pub date: chrono::NaiveDate,
+    pub name: String,
 }
 
 pub mod error {
@@ -166,5 +196,22 @@ pub mod error {
 
         /// Error when reading the response.
         ParseError(serde_json::Error),
+    }
+
+    /// Error that can happen when trying to get a lunch menu.
+    #[derive(Debug)]
+    pub enum LunchMenuError {
+        /// Error when sending the request.
+        RequestError(RequestError),
+
+        /// Error when reading the response.
+        ParseError(LunchMenuParseError),
+    }
+
+    #[derive(Debug)]
+    pub enum LunchMenuParseError {
+        NoLunchMenu,
+        SerdeError(serde_json::Error),
+        DateParseError(String, chrono::ParseError),
     }
 }
