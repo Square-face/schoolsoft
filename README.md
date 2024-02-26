@@ -8,9 +8,9 @@ Thanks to Blatzar for having made [schoolsoft-api-app](https://github.com/Blatza
 
 - [x] School List
 - [x] Login
-- [ ] Token
-    - [ ] Get
-    - [ ] Smart Refresh
+- [x] Token
+    - [x] Get
+    - [x] Smart Refresh
 - [ ] Get schedule
 - [ ] Get lunch
 - [ ] Get news
