@@ -48,16 +48,16 @@ async fn success() {
         user.pictute_url,
         "pictureFile.jsp?studentId=1337".to_string()
     );
-    assert_eq!(user.is_of_age, false);
+    assert!(!user.is_of_age);
     assert_eq!(user.app_key, "123notreal".to_string());
     assert_eq!(user.token, None);
     assert_eq!(user.user_type, UserType::Student);
     assert_eq!(user.id, 1337);
     assert_eq!(user.orgs.len(), 1);
     let org = &user.orgs[0];
+    assert!(!org.blogger);
     assert_eq!(org.id, 1);
     assert_eq!(org.name, "Mock School");
-    assert_eq!(org.blogger, false);
     assert_eq!(org.school_type, 9);
     assert_eq!(org.leisure_school, 0);
     assert_eq!(org.class, "F35b");

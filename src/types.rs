@@ -143,7 +143,7 @@ pub struct LunchMenu {
 #[derive(Debug, Clone)]
 pub struct Lunch {
     pub date: chrono::NaiveDate,
-    pub name: String,
+    pub food: String,
 }
 
 pub mod error {

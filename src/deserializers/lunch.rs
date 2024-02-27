@@ -2,7 +2,7 @@ use crate::{
     types::{error::LunchMenuParseError, Lunch, LunchMenu},
     utils,
 };
-use serde::{de::Error, Deserialize};
+use serde::Deserialize;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
@@ -42,30 +42,33 @@ impl LunchMenu {
         let dates = raw
             .dates
             .iter()
-            .map(|date| utils::parse_date(date).map_err(|err| LunchMenuParseError::DateParseError(date.to_string(), err)))
+            .map(|date| {
+                utils::parse_date(date)
+                    .map_err(|err| LunchMenuParseError::DateParseError(date.to_string(), err))
+            })
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(LunchMenu {
             week: raw.week,
             monday: Lunch {
                 date: dates[0],
-                name: raw.monday.clone(),
+                food: raw.monday.clone(),
             },
             tuesday: Lunch {
                 date: dates[1],
-                name: raw.tuesday.clone(),
+                food: raw.tuesday.clone(),
             },
             wednesday: Lunch {
                 date: dates[2],
-                name: raw.wednesday.clone(),
+                food: raw.wednesday.clone(),
             },
             thursday: Lunch {
                 date: dates[3],
-                name: raw.thursday.clone(),
+                food: raw.thursday.clone(),
             },
             friday: Lunch {
                 date: dates[4],
-                name: raw.friday.clone(),
+                food: raw.friday.clone(),
             },
             created_at: utils::parse_datetime(&raw.cre_date)
                 .map_err(|err| LunchMenuParseError::DateParseError(raw.cre_date.clone(), err))?,
@@ -122,30 +125,30 @@ mod tests {
             lunch_menu.monday.date,
             chrono::NaiveDate::from_ymd_opt(2024, 2, 19).unwrap()
         );
-        assert_eq!(lunch_menu.monday.name, "Pasta med strimlat fläskkött och pepparsås.\r\n\r\nVeg:\r\nPasta med vegobitar och pepparsås.");
+        assert_eq!(lunch_menu.monday.food, "Pasta med strimlat fläskkött och pepparsås.\r\n\r\nVeg:\r\nPasta med vegobitar och pepparsås.");
 
         assert_eq!(
             lunch_menu.tuesday.date,
             chrono::NaiveDate::from_ymd_opt(2024, 2, 20).unwrap()
         );
-        assert_eq!(lunch_menu.tuesday.name, "Het köttfärssoppa med kökets bröd.\r\n\r\nVeg:\r\nHet bön och rotfruktssoppa med kökets bröd.");
+        assert_eq!(lunch_menu.tuesday.food, "Het köttfärssoppa med kökets bröd.\r\n\r\nVeg:\r\nHet bön och rotfruktssoppa med kökets bröd.");
 
         assert_eq!(
             lunch_menu.wednesday.date,
             chrono::NaiveDate::from_ymd_opt(2024, 2, 21).unwrap()
         );
-        assert_eq!(lunch_menu.wednesday.name, "Kyckling- och gröncurry thai med ris.\r\n\r\nVeg:\r\nBlomkål- och gröncurry thai med ris.");
+        assert_eq!(lunch_menu.wednesday.food, "Kyckling- och gröncurry thai med ris.\r\n\r\nVeg:\r\nBlomkål- och gröncurry thai med ris.");
 
         assert_eq!(
             lunch_menu.thursday.date,
             chrono::NaiveDate::from_ymd_opt(2024, 2, 22).unwrap()
         );
-        assert_eq!(lunch_menu.thursday.name, "Pestobakad fisk med vitvinsås och pasta penne.\r\n\r\nVeg:\r\nGrönsaksbiffar med vitvinsås och pasta penne.");
+        assert_eq!(lunch_menu.thursday.food, "Pestobakad fisk med vitvinsås och pasta penne.\r\n\r\nVeg:\r\nGrönsaksbiffar med vitvinsås och pasta penne.");
 
         assert_eq!(
             lunch_menu.friday.date,
             chrono::NaiveDate::from_ymd_opt(2024, 2, 23).unwrap()
         );
-        assert_eq!(lunch_menu.friday.name, "Kryddiga korvar med potatissallad och paprikamajo.\r\n\r\nVeg:\r\nKryddig sojakorv med potatissallad och paprikamajo.");
+        assert_eq!(lunch_menu.friday.food, "Kryddiga korvar med potatissallad och paprikamajo.\r\n\r\nVeg:\r\nKryddig sojakorv med potatissallad och paprikamajo.");
     }
 }

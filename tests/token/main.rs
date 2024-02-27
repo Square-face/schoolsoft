@@ -40,7 +40,7 @@ async fn token_success() {
     );
     assert_eq!(
         &(user.token.clone().unwrap().expires),
-        &(NaiveDate::from_ymd_opt(2024, 02, 12)
+        &(NaiveDate::from_ymd_opt(2024, 2, 12)
             .unwrap()
             .and_hms_opt(17, 22, 23)
             .unwrap()
