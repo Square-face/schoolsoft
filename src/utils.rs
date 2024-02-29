@@ -39,9 +39,31 @@ macro_rules! url {
 
 #[cfg(test)]
 mod tests {
+    use crate::utils;
+
     #[test]
     fn test_macro() {
         let base = "https://example.com";
         assert_eq!(url!(base, test), "https://example.com/rest/app/test");
+    }
+
+    #[test]
+    fn test_parse_date() {
+        let date = "2021-01-01";
+        let parsed = utils::parse_date(date).unwrap();
+        assert_eq!(parsed, chrono::NaiveDate::from_ymd_opt(2021, 1, 1).unwrap());
+    }
+
+    #[test]
+    fn test_parse_datetime() {
+        let date = "2021-01-01 12:00:00.000";
+        let parsed = utils::parse_datetime(date).unwrap();
+        assert_eq!(
+            parsed,
+            chrono::NaiveDate::from_ymd_opt(2021, 1, 1)
+                .unwrap()
+                .and_hms_milli_opt(12, 0, 0, 0)
+                .unwrap()
+        );
     }
 }

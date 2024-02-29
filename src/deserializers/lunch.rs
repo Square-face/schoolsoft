@@ -120,6 +120,13 @@ mod tests {
 
         let lunch_menu = LunchMenu::deserialize(data).unwrap();
         assert_eq!(lunch_menu.week, 8);
+        assert_eq!(
+            lunch_menu.created_at,
+            chrono::NaiveDate::from_ymd_opt(2024, 2, 16)
+                .unwrap()
+                .and_hms_opt(15, 3, 15)
+                .unwrap()
+        );
 
         assert_eq!(
             lunch_menu.monday.date,

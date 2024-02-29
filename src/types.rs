@@ -208,6 +208,7 @@ pub mod error {
         ParseError(LunchMenuParseError),
     }
 
+    /// Error that can happen when trying to parse a lunch menu.
     #[derive(Debug)]
     pub enum LunchMenuParseError {
         NoLunchMenu,

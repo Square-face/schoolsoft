@@ -82,15 +82,13 @@ mod tests {
 
     #[test]
     fn deserialize_valid_json() {
-        let json_data = r#"
-            {
+        let json_data = r#"{
                 "studentLoginMethods": "0,1,4",
                 "parentLoginMethods": "4",
                 "name": "Mock School",
                 "teacherLoginMethods": "0",
                 "url": "https://sms.schoolsoft.se/mock/"
-            }
-        "#;
+            }"#;
 
         let school_listing =
             SchoolListing::deserializer(json_data).expect("Failed to deserialize JSON");
