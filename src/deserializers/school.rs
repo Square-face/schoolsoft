@@ -3,6 +3,8 @@ use crate::types::error;
 use serde::{de::Error, Deserialize};
 use crate::types::{SchoolListing, LoginMethods};
 
+use super::Deserializer;
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[serde(deny_unknown_fields)]
@@ -14,6 +16,19 @@ struct RawSchoolListing {
     url: String,
 }
 
+impl Deserializer for SchoolListing {
+    type Error = error::SchoolListingError;
+
+    fn deserialize(data: &str) -> Result<Self, Self::Error>
+    where
+        Self: Sized,
+    {
+        let raw_school_listing: RawSchoolListing =
+            serde_json::from_str(data).map_err(error::SchoolListingError::ParseError)?;
+
+        Self::from_raw(raw_school_listing)
+    }
+}
 
 impl SchoolListing {
     fn parse_methods(raw: &str) -> Result<Vec<u8>, error::SchoolListingError> {
@@ -53,13 +68,6 @@ impl SchoolListing {
         })
     }
 
-    pub fn deserializer(json: &str) -> Result<Self, error::SchoolListingError> {
-        let raw_school_listing: RawSchoolListing =
-            serde_json::from_str(json).map_err(error::SchoolListingError::ParseError)?;
-
-        Self::from_raw(raw_school_listing)
-    }
-
     pub fn deserialize_many(json: &str) -> Result<Vec<Self>, error::SchoolListingError> {
         let raw_school_listings: Vec<RawSchoolListing> =
             serde_json::from_str(json).map_err(error::SchoolListingError::ParseError)?;
@@ -91,7 +99,7 @@ mod tests {
             }"#;
 
         let school_listing =
-            SchoolListing::deserializer(json_data).expect("Failed to deserialize JSON");
+            SchoolListing::deserialize(json_data).expect("Failed to deserialize JSON");
 
         assert_eq!(school_listing.name, "Mock School");
         assert_eq!(school_listing.url, "https://sms.schoolsoft.se/mock/");
@@ -115,7 +123,7 @@ mod tests {
             }
         "#;
 
-        let result = SchoolListing::deserializer(invalid_json);
+        let result = SchoolListing::deserialize(invalid_json);
 
         assert!(
             result.is_err(),

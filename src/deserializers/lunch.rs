@@ -4,6 +4,8 @@ use crate::{
 };
 use serde::Deserialize;
 
+use super::Deserializer;
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -31,8 +33,13 @@ struct RawLunchMenu {
     monday: String,
 }
 
-impl LunchMenu {
-    pub fn deserialize(data: &str) -> Result<LunchMenu, LunchMenuParseError> {
+impl Deserializer for LunchMenu {
+    type Error = LunchMenuParseError;
+
+    fn deserialize(data: &str) -> Result<Self, Self::Error>
+    where
+        Self: Sized,
+    {
         let raw: Vec<RawLunchMenu> =
             serde_json::from_str(data).map_err(LunchMenuParseError::SerdeError)?;
         let raw = raw
@@ -83,40 +90,38 @@ mod tests {
 
     #[test]
     fn test_deserialize() {
-        let data = r#"
-[
-    {
-        "saturday": "",
-        "week": 8,
-        "updById": 112,
-        "creByType": -1,
-        "creDate": "2024-02-16 15:03:15.0",
-        "dishCategoryName": "Lunch",
-        "creById": 112,
-        "thursday": "Pestobakad fisk med vitvinsås och pasta penne.\r\n\r\nVeg:\r\nGrönsaksbiffar med vitvinsås och pasta penne.",
-        "dates": [
-            "2024-02-19",
-            "2024-02-20",
-            "2024-02-21",
-            "2024-02-22",
-            "2024-02-23",
-            "2024-02-24",
-            "2024-02-25"
-        ],
-        "orgId": 1,
-        "updDate": "2024-02-16 15:03:15.0",
-        "empty": false,
-        "updByType": -1,
-        "sunday": "",
-        "tuesday": "Het köttfärssoppa med kökets bröd.\r\n\r\nVeg:\r\nHet bön och rotfruktssoppa med kökets bröd.",
-        "dish": 1,
-        "wednesday": "Kyckling- och gröncurry thai med ris.\r\n\r\nVeg:\r\nBlomkål- och gröncurry thai med ris.",
-        "friday": "Kryddiga korvar med potatissallad och paprikamajo.\r\n\r\nVeg:\r\nKryddig sojakorv med potatissallad och paprikamajo.",
-        "id": -1,
-        "monday": "Pasta med strimlat fläskkött och pepparsås.\r\n\r\nVeg:\r\nPasta med vegobitar och pepparsås."
-    }
-]
-        "#;
+        let data = r#"[
+            {
+                "saturday": "",
+                "week": 8,
+                "updById": 112,
+                "creByType": -1,
+                "creDate": "2024-02-16 15:03:15.0",
+                "dishCategoryName": "Lunch",
+                "creById": 112,
+                "thursday": "Pestobakad fisk med vitvinsås och pasta penne.\r\n\r\nVeg:\r\nGrönsaksbiffar med vitvinsås och pasta penne.",
+                "dates": [
+                    "2024-02-19",
+                    "2024-02-20",
+                    "2024-02-21",
+                    "2024-02-22",
+                    "2024-02-23",
+                    "2024-02-24",
+                    "2024-02-25"
+                ],
+                "orgId": 1,
+                "updDate": "2024-02-16 15:03:15.0",
+                "empty": false,
+                "updByType": -1,
+                "sunday": "",
+                "tuesday": "Het köttfärssoppa med kökets bröd.\r\n\r\nVeg:\r\nHet bön och rotfruktssoppa med kökets bröd.",
+                "dish": 1,
+                "wednesday": "Kyckling- och gröncurry thai med ris.\r\n\r\nVeg:\r\nBlomkål- och gröncurry thai med ris.",
+                "friday": "Kryddiga korvar med potatissallad och paprikamajo.\r\n\r\nVeg:\r\nKryddig sojakorv med potatissallad och paprikamajo.",
+                "id": -1,
+                "monday": "Pasta med strimlat fläskkött och pepparsås.\r\n\r\nVeg:\r\nPasta med vegobitar och pepparsås."
+            }
+        ]"#;
 
         let lunch_menu = LunchMenu::deserialize(data).unwrap();
         assert_eq!(lunch_menu.week, 8);

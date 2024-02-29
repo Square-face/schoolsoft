@@ -87,7 +87,6 @@ impl Token {
         }
     }
 
-
     /// Returns the duration until the token expires
     ///
     /// # Example
@@ -179,6 +178,7 @@ mod tests {
 
     mod user {
         use super::*;
+        use crate::deserializers::Deserializer;
 
         #[test]
         fn deserialize_valid_json() {
@@ -202,7 +202,7 @@ mod tests {
                 "userId": 1337
             }"#;
 
-            let user = User::deserialize(json_data, "https://example.com/mock_school".to_string())
+            let user = User::deserialize(json_data)
                 .expect("Failed to deserialize JSON");
 
             assert_eq!(user.name, "Mock User");

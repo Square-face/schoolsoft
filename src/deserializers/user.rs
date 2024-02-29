@@ -1,7 +1,11 @@
-use serde::Deserialize;
-use crate::{types::{Org, User, UserType}, user::Token};
+use crate::{
+    types::{Org, User, UserType},
+    user::Token,
+};
 use serde::de::Error;
+use serde::Deserialize;
 
+use super::Deserializer;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -30,7 +34,9 @@ struct RawUser {
     pub user_id: u32,
 }
 
-impl User {
+impl Deserializer for User {
+    type Error = serde_json::Error;
+
     /// Deserialize a user from a JSON String
     ///
     /// # Arguments
@@ -40,6 +46,7 @@ impl User {
     /// # Example
     /// ```
     /// # use schoolsoft::types::User;
+    /// # use schoolsoft::deserializers::Deserializer;
     /// let user = User::deserialize(r#"{
     ///     "pictureUrl": "pictureFile.jsp?studentId=1337",
     ///     "name": "Mock User",
@@ -52,20 +59,19 @@ impl User {
     ///          "schoolType": 9,
     ///          "leisureSchool": 0,
     ///          "class": "F35b",
-    ///          "orgId": 1, 
+    ///          "orgId": 1,
     ///          "tokenLogin": "https://sms1.schoolsoft.se/mock_school/jsp/app/TokenLogin.jsp?token=TOKEN_PLACEHOLDER&orgid=1&childid=1337&redirect=https%3A%2F%2Fsms1.schoolsoft.se%2mock_school%2Fjsp%2Fstudent%2Fright_student_startpage.jsp"
     ///      }
     ///      ],
     ///      "type": 1,
     ///      "userId": 1337
     /// }"#,
-    /// "https://example.com/mock_school".to_string(),
     /// ).expect("Failed to deserialize JSON");
     /// ```
-    pub fn deserialize(json: &str, school_url: String) -> Result<User, serde_json::Error> {
+    fn deserialize(json: &str) -> Result<User, serde_json::Error> {
         let raw: RawUser = serde_json::from_str(json)?;
 
-        let orgs = raw
+        let orgs: Vec<_> = raw
             .orgs
             .into_iter()
             .map(|raw_org| Org {
@@ -78,6 +84,8 @@ impl User {
                 token_login: raw_org.token_login,
             })
             .collect();
+
+        let school_url = orgs[0].token_login.clone().split('/').take(3).collect();
 
         Ok(User {
             school_url,

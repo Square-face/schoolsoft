@@ -1,11 +1,12 @@
-use crate::types::User;
-use crate::types::SchoolListing;
 use crate::types::error;
+use crate::types::SchoolListing;
+use crate::types::User;
+use crate::deserializers::Deserializer;
 
+pub mod deserializers;
 pub mod types;
 mod user;
 mod utils;
-mod deserializers;
 
 /// Api client for the api used by schoolsofts app
 #[derive(Debug)]
@@ -146,10 +147,12 @@ impl Client {
             .request(reqwest::Method::POST, url)
             .form(&params);
 
-        let data = utils::make_request(request).await.map_err(error::LoginError::RequestError)?;
+        let data = utils::make_request(request)
+            .await
+            .map_err(error::LoginError::RequestError)?;
 
         // Parse response
-        let user = User::deserialize(&data, school_url).map_err(error::LoginError::ParseError)?;
+        let user = User::deserialize(&data).map_err(error::LoginError::ParseError)?;
 
         self.user = Some(user);
         Ok(())
