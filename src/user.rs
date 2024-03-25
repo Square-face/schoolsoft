@@ -68,21 +68,29 @@ impl User {
     }
 
     /// Get this weeks lunch menu
+    ///
+    /// # Returns
+    /// A [`LunchMenu`] or [`LunchMenuError`] depending on if the request and parsing was
+    /// successful
     pub async fn get_lunch(&mut self) -> Result<LunchMenu, LunchMenuError> {
+        // Get token
         let token = self
             .smart_token()
             .await
             .map_err(LunchMenuError::TokenError)?;
 
+        // Create Request
         let request = self
             .client
             .get(api(self, "lunchmenus"))
             .header("token", token.token);
 
+        // Get menu
         let response = make_request(request)
             .await
             .map_err(LunchMenuError::RequestError)?;
 
+        // Deserialize and return
         LunchMenu::deserialize(&response).map_err(LunchMenuError::ParseError)
     }
 }
