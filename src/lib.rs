@@ -5,8 +5,8 @@ use crate::deserializers::Deserializer;
 
 pub mod deserializers;
 pub mod types;
-mod user;
-mod utils;
+pub mod user;
+pub mod utils;
 
 /// Api client for the api used by schoolsofts app
 #[derive(Debug)]
@@ -35,7 +35,7 @@ pub struct Client {
     pub user: Option<User>,
 }
 
-/// Client builder.
+/// [`Client`] builder
 ///
 /// Useful for configuring the client.
 ///
@@ -102,8 +102,9 @@ pub struct ClientBuilder {
 impl Client {
     /// Attempt to login with the given credentials.
     ///
-    /// `school` is the [school::SchoolListing::url_name] of the school.
+    /// `school` is the [`types::SchoolListing::url_name`] of the school.
     /// username and password are the same as when logging into the website or mobile app
+    ///
     ///
     /// # Arguments
     /// - username: The username to login with.

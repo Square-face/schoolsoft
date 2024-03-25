@@ -1,10 +1,14 @@
-use crate::types::error;
-use crate::url;
+use crate::deserializers::Deserializer;
+use crate::rest;
+use crate::types::error::{LunchMenuError, TokenError};
+use crate::types::LunchMenu;
+use crate::utils::{api, make_request};
 use chrono::Duration;
 
 pub use crate::types::{Org, Token, User, UserType};
 
 impl User {
+    /// Manually create a new user
     pub fn new(
         school_url: String,
         name: String,
@@ -31,32 +35,55 @@ impl User {
     ///
     /// This method uses the app key to get a new token from the schoolsoft api. The token is then
     /// used to authenticate to the api when making other requests.
-    pub async fn get_token(&mut self) -> Result<String, error::TokenError> {
+    pub async fn get_token(&mut self) -> Result<Token, TokenError> {
         let request = self
             .client
-            .post(url!(self.school_url, token))
+            .post(rest!(self.school_url, token))
             .header("appKey", &self.app_key)
             .header("deviceid", "TempleOs");
 
-        let response = crate::utils::make_request(request)
+        let response = make_request(request)
             .await
-            .map_err(error::TokenError::RequestError)?;
+            .map_err(TokenError::RequestError)?;
 
-        let token = Token::deserialize(&response).map_err(error::TokenError::ParseError)?;
+        let token = Token::deserialize(&response).map_err(TokenError::ParseError)?;
 
         self.token = Some(token.clone());
 
-        Ok(token.token)
+        Ok(token)
     }
 
     /// Get a token for the user
     ///
-    /// This method returns the saved token if it is still valid, otherwise it gets a new token
-    pub async fn smart_token(&mut self) -> Result<String, error::TokenError> {
+    /// Checks if the current token is close to expiring.
+    /// If it is it will get a new token and replace [`Self::token`] with the new one.
+    ///
+    /// # Returns
+    /// The [`Token`] or an error if a new token had to be fetched and failed.
+    pub async fn smart_token(&mut self) -> Result<Token, TokenError> {
         match &self.token {
-            Some(token) if token.is_safe() => Ok(token.token.clone()),
+            Some(token) if token.is_safe() => Ok(token.clone()),
             _ => self.get_token().await,
         }
+    }
+
+    /// Get this weeks lunch menu
+    pub async fn get_lunch(&mut self) -> Result<LunchMenu, LunchMenuError> {
+        let token = self
+            .smart_token()
+            .await
+            .map_err(LunchMenuError::TokenError)?;
+
+        let request = self
+            .client
+            .get(api(self, "lunchmenus"))
+            .header("token", token.token);
+
+        let response = make_request(request)
+            .await
+            .map_err(LunchMenuError::RequestError)?;
+
+        LunchMenu::deserialize(&response).map_err(LunchMenuError::ParseError)
     }
 }
 
@@ -202,8 +229,7 @@ mod tests {
                 "userId": 1337
             }"#;
 
-            let user = User::deserialize(json_data)
-                .expect("Failed to deserialize JSON");
+            let user = User::deserialize(json_data).expect("Failed to deserialize JSON");
 
             assert_eq!(user.name, "Mock User");
             assert_eq!(

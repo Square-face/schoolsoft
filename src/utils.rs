@@ -1,4 +1,7 @@
-use crate::types::error::RequestError;
+use crate::{
+    types::error::RequestError,
+    user::{User, UserType},
+};
 use reqwest::StatusCode;
 
 pub fn check_codes(code: StatusCode) -> Result<(), RequestError> {
@@ -30,8 +33,29 @@ pub fn parse_datetime(raw: &str) -> Result<chrono::NaiveDateTime, chrono::ParseE
     chrono::NaiveDateTime::parse_from_str(raw, "%Y-%m-%d %H:%M:%S%.f")
 }
 
+pub fn api(user: &User, path: &str) -> String {
+    format!(
+        "{}/api/{}/{}/{}",
+        user.school_url,
+        path,
+        user.user_type.to_string(),
+        user.orgs[0].id
+    )
+}
+
+impl ToString for UserType {
+    fn to_string(&self) -> String {
+        match self {
+            UserType::Student => "student",
+            UserType::Parent => "parent",
+            UserType::Teacher => "teacher",
+        }
+        .to_string()
+    }
+}
+
 #[macro_export]
-macro_rules! url {
+macro_rules! rest {
     ($base:expr, $path:ident) => {
         format!("{}/rest/app/{}", $base, stringify!($path))
     };
@@ -44,7 +68,7 @@ mod tests {
     #[test]
     fn test_macro() {
         let base = "https://example.com";
-        assert_eq!(url!(base, test), "https://example.com/rest/app/test");
+        assert_eq!(rest!(base, test), "https://example.com/rest/app/test");
     }
 
     #[test]

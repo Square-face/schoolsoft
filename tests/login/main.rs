@@ -86,7 +86,7 @@ async fn failure() {
     let response = client.login("mock_username", "mock_password", "mock_school");
 
     match response.await {
-        Ok(_) => panic!("Expected error"),
+        Ok(_) => panic!("Should have returned an error"),
         Err(LoginError::RequestError(RequestError::Unauthorized)) => (),
         Err(_) => panic!("Unexpected error"),
     }

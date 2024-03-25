@@ -1,3 +1,5 @@
+//! Type definitions for the structs and errors that the wrapper can return
+
 use serde_repr::Deserialize_repr;
 
 /// The type of user
@@ -203,6 +205,9 @@ pub mod error {
     pub enum LunchMenuError {
         /// Error when sending the request.
         RequestError(RequestError),
+
+        /// Error when trying to retrieve the token.
+        TokenError(TokenError),
 
         /// Error when reading the response.
         ParseError(LunchMenuParseError),
