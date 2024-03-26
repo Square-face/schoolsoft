@@ -41,7 +41,7 @@ pub struct Token {
 /// All i know is that when logging in, the api responds with a list of organizations. But so far
 /// that list has only ever contained one singular organization with the same name as the school im
 /// attending.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Org {
     /// Unique identifier for the organization
     pub id: u32,
@@ -112,7 +112,7 @@ pub struct User {
 /// its available.
 ///
 /// For the app api to work 4 must be present.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoginMethods {
     pub student: Vec<u8>,
     pub teacher: Vec<u8>,
@@ -120,7 +120,7 @@ pub struct LoginMethods {
 }
 
 /// A schoolsoft school
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SchoolListing {
     pub login_methods: LoginMethods,
     pub name: String,
@@ -129,7 +129,7 @@ pub struct SchoolListing {
 }
 
 /// Represents a specific weeks lunch menu
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LunchMenu {
     pub week: u32,
     pub created_at: chrono::NaiveDateTime,
@@ -142,7 +142,7 @@ pub struct LunchMenu {
 }
 
 /// Represents a specific days lunch
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Lunch {
     pub date: chrono::NaiveDate,
     pub food: String,
