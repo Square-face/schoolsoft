@@ -7,6 +7,7 @@ pub mod deserializers;
 pub mod types;
 pub mod user;
 pub mod utils;
+pub mod schedule;
 
 /// Api client for the api used by schoolsofts app
 #[derive(Debug)]

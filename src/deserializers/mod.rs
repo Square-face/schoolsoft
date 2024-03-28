@@ -21,3 +21,16 @@ pub trait Deserializer {
     where
         Self: Sized;
 }
+
+pub mod schoolsoft_date {
+    use chrono::NaiveDateTime;
+    use serde::{self, Deserialize, Deserializer};
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S%.f").map_err(serde::de::Error::custom)
+    }
+}

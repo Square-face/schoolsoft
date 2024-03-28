@@ -1,6 +1,7 @@
 //! Type definitions for the structs and errors that the wrapper can return
 
 use serde_repr::Deserialize_repr;
+use uuid::Uuid;
 
 /// The type of user
 ///
@@ -148,6 +149,7 @@ pub struct Lunch {
     pub food: String,
 }
 
+
 pub mod error {
     /// General error that can happen in most cases when making a request.
     #[derive(Debug)]
@@ -219,5 +221,17 @@ pub mod error {
         NoLunchMenu,
         SerdeError(serde_json::Error),
         DateParseError(String, chrono::ParseError),
+    }
+
+    #[derive(Debug)]
+    pub enum ScheduleError {
+        /// Error when sending the request.
+        RequestError(RequestError),
+
+        /// Error when trying to retrieve the token.
+        TokenError(TokenError),
+
+        /// Error when reading the response.
+        ParseError(serde_json::Error),
     }
 }
