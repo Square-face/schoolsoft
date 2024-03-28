@@ -150,88 +150,97 @@ pub struct Lunch {
 }
 
 
+/// Types used when something goes wrong
 pub mod error {
+    use thiserror::Error;
+
     /// General error that can happen in most cases when making a request.
-    #[derive(Debug)]
+    #[derive(Error, Debug)]
     pub enum RequestError {
-        /// Error when sending the request.
+        #[error("Error when sending request: {0}")]
         RequestError(reqwest::Error),
 
-        /// Error when reading the response.
+        #[error("Error when reading the response: {0}")]
         ReadError(reqwest::Error),
 
-        /// The given credentials are invalid.
+        #[error("Unauthorized")]
         Unauthorized,
 
-        /// Something went wrong on the server.
+        #[error("Internal server error")]
         InternalServerError,
 
-        /// An unchecked status code was returned.
+        #[error("Response returned a unexpected status code: {0}")]
         UncheckedCode(reqwest::StatusCode),
     }
 
     /// Error that can happen when trying to get a list of schools.
-    #[derive(Debug)]
+    #[derive(Error, Debug)]
     pub enum SchoolListingError {
-        /// Error when sending the request.
+        #[error("Error when sending request: {0}")]
         RequestError(RequestError),
 
-        /// Error when reading the response.
+        #[error("Error when reading the response: {0}")]
         ParseError(serde_json::Error),
 
+        #[error("The url is invalid")]
         BadUrl,
     }
 
     /// Error that can happen when trying to get a token.
-    #[derive(Debug)]
+    #[derive(Error, Debug)]
     pub enum TokenError {
-        /// Error when sending the request.
+        #[error("Error when sending request: {0}")]
         RequestError(RequestError),
 
-        /// Error when reading the response.
+        #[error("Error when reading the response: {0}")]
         ParseError(serde_json::Error),
     }
 
     /// Error that can happen when trying to login.
-    #[derive(Debug)]
+    #[derive(Error, Debug)]
     pub enum LoginError {
-        /// Error when sending the request.
+        #[error("Error when sending request: {0}")]
         RequestError(RequestError),
 
-        /// Error when reading the response.
+        #[error("Error when reading the response: {0}")]
         ParseError(serde_json::Error),
     }
 
     /// Error that can happen when trying to get a lunch menu.
-    #[derive(Debug)]
+    #[derive(Error, Debug)]
     pub enum LunchMenuError {
-        /// Error when sending the request.
+        #[error("Error when sending request: {0}")]
         RequestError(RequestError),
 
-        /// Error when trying to retrieve the token.
+        #[error("Error when retrieving new token: {0}")]
         TokenError(TokenError),
 
-        /// Error when reading the response.
+        #[error("Error when reading the response: {0}")]
         ParseError(LunchMenuParseError),
     }
 
     /// Error that can happen when trying to parse a lunch menu.
-    #[derive(Debug)]
+    #[derive(Error, Debug)]
     pub enum LunchMenuParseError {
+        #[error("No lunch menu available")]
         NoLunchMenu,
+
+        #[error("Error when parsing json: {0}")]
         SerdeError(serde_json::Error),
+
+        #[error("Error when parsing date: {0}")]
         DateParseError(String, chrono::ParseError),
     }
 
-    #[derive(Debug)]
+    #[derive(Error, Debug)]
     pub enum ScheduleError {
-        /// Error when sending the request.
+        #[error("Error when sending request: {0}")]
         RequestError(RequestError),
 
-        /// Error when trying to retrieve the token.
+        #[error("Error when retrieving new token: {0}")]
         TokenError(TokenError),
 
-        /// Error when reading the response.
+        #[error("Error when reading the response: {0}")]
         ParseError(serde_json::Error),
     }
 }
