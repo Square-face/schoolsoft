@@ -1,3 +1,5 @@
+use std::{ops::Range, str::Chars};
+
 use crate::{
     types::error::RequestError,
     user::{User, UserType},
@@ -43,6 +45,62 @@ pub fn api(user: &User, path: &str) -> String {
     )
 }
 
+pub struct WeekRange<'a> {
+    input: Chars<'a>,
+
+    range: Option<Range<u8>>,
+}
+
+impl<'a> From<&'a str> for WeekRange<'a> {
+    fn from(value: &'a str) -> Self {
+        WeekRange {
+            input: value.chars(),
+            range: None,
+        }
+    }
+}
+
+impl Iterator for WeekRange<'_> {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(range) = self.range.as_mut() {
+            if let Some(next) = range.next() {
+                return Some(next);
+            } else {
+                self.range = None;
+            }
+        }
+
+        let mut temp = String::new();
+
+        let mut start = 0;
+
+        for c in self.input.by_ref() {
+            if c == '-' {
+                start = temp.parse().ok()?;
+                temp.clear();
+            }
+
+            if c == ' ' {
+                break;
+            }
+
+            temp.push(c);
+        }
+
+        let end: u8 = temp.parse().ok()?;
+
+        if start == 0 {
+            return Some(end);
+        }
+
+        self.range = Some(start + 1..end);
+
+        Some(start)
+    }
+}
+
 impl ToString for UserType {
     fn to_string(&self) -> String {
         match self {
@@ -64,6 +122,8 @@ macro_rules! rest {
 #[cfg(test)]
 mod tests {
     use crate::utils;
+
+    use super::WeekRange;
 
     #[test]
     fn test_macro() {
@@ -89,5 +149,15 @@ mod tests {
                 .and_hms_milli_opt(12, 0, 0, 0)
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn test_week_parser() {
+        let input = "10 11-14";
+        let expected = [10, 11, 12, 13, 14].into_iter();
+
+        for (actual, expected) in expected.zip(WeekRange::from(input)) {
+            assert_eq!(actual, expected);
+        };
     }
 }
