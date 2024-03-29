@@ -6,8 +6,7 @@ authors = ["Linus Michelsson <linus.michelsson@gmail.com>"]
 description = "A library for interacting with SchoolSofts mobile app API"
 readme = "README.md"
 repository = "https://github.com/Square-face/schoolsoft"
-license = "GNU GENERAL PUBLIC LICENSE Version 3"
-license-file = "LICENSE"
+license = "GPL-3-only"
 keywords = ["schoolsoft", "api", "school", "education", "sweden", "schoolsoft-api"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
