@@ -2,6 +2,13 @@
 name = "schoolsoft"
 version = "1.0.0-alpha.0"
 edition = "2021"
+authors = ["Linus Michelsson <linus.michelsson@gmail.com>"]
+description = "A library for interacting with SchoolSofts mobile app API"
+readme = "README.md"
+repository = "https://github.com/Square-face/schoolsoft"
+license = "GNU GENERAL PUBLIC LICENSE Version 3"
+license-file = "LICENSE"
+keywords = ["schoolsoft", "api", "school", "education", "sweden", "schoolsoft-api"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
