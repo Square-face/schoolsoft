@@ -152,6 +152,7 @@ pub struct Lunch {
 
 /// Types used when something goes wrong
 pub mod error {
+    use chrono::OutOfRange;
     use thiserror::Error;
 
     /// General error that can happen in most cases when making a request.
@@ -219,6 +220,18 @@ pub mod error {
         ParseError(LunchMenuParseError),
     }
 
+    #[derive(Error, Debug)]
+    pub enum ScheduleError {
+        #[error("Error when sending request: {0}")]
+        RequestError(RequestError),
+
+        #[error("Error when retrieving new token: {0}")]
+        TokenError(TokenError),
+
+        #[error("Error when reading the response: {0}")]
+        ParseError(serde_json::Error),
+    }
+
     /// Error that can happen when trying to parse a lunch menu.
     #[derive(Error, Debug)]
     pub enum LunchMenuParseError {
@@ -231,16 +244,22 @@ pub mod error {
         #[error("Error when parsing date: {0}")]
         DateParseError(String, chrono::ParseError),
     }
-
+    
     #[derive(Error, Debug)]
-    pub enum ScheduleError {
-        #[error("Error when sending request: {0}")]
-        RequestError(RequestError),
+    pub enum ScheduleParseError {
+        #[error("Error when parsing json: {0}")]
+        SerdeError(serde_json::Error),
 
-        #[error("Error when retrieving new token: {0}")]
-        TokenError(TokenError),
+        #[error("Error when parsing date: {0}")]
+        DateParseError(chrono::ParseError),
 
-        #[error("Error when reading the response: {0}")]
-        ParseError(serde_json::Error),
+        #[error("Error when parsing time: {0}")]
+        TimeParseError(chrono::ParseError),
+
+        #[error("Error when parsing day_of_week: {0}")]
+        DayOfWeekError(OutOfRange),
+
+        #[error("Error when parsing uuid: {0}")]
+        UuidParseError(uuid::Error),
     }
 }
