@@ -18,3 +18,8 @@ Do not use this library until at has reached at least 1.0 so the api's have a ch
     - [x] Parser
     - [ ] Route
 - [x] Get lunch
+
+## Planed future features
+
+- [ ] News
+- [ ] Absence
