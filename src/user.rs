@@ -1,6 +1,7 @@
 use crate::deserializers::Deserializer;
 use crate::rest;
-use crate::types::error::{LunchMenuError, TokenError};
+use crate::schedule::Schedule;
+use crate::types::error::{LunchMenuError, ScheduleError, TokenError};
 use crate::types::LunchMenu;
 use crate::utils::{api, make_request};
 use chrono::Duration;
@@ -92,6 +93,28 @@ impl User {
 
         // Deserialize and return
         LunchMenu::deserialize(&response).map_err(LunchMenuError::ParseError)
+    }
+
+    /// Get the entire schedule (cus schoolsoft doesn't believe in the concept of filters)
+    ///
+    pub async fn get_schedule(&mut self) -> Result<Schedule, ScheduleError> {
+        // Get token
+        let token = self
+            .smart_token()
+            .await
+            .map_err(ScheduleError::TokenError)?;
+
+        // Create request
+        let request = self
+            .client
+            .get(api(self, "lessons"))
+            .header("token", token.token);
+
+        let response = make_request(request)
+            .await
+            .map_err(ScheduleError::RequestError)?;
+
+        Schedule::deserialize(&response).map_err(ScheduleError::ParseError)
     }
 }
 

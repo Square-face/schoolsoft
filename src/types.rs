@@ -229,7 +229,7 @@ pub mod error {
         TokenError(TokenError),
 
         #[error("Error when reading the response: {0}")]
-        ParseError(serde_json::Error),
+        ParseError(ScheduleParseError),
     }
 
     /// Error that can happen when trying to parse a lunch menu.
