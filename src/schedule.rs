@@ -1,9 +1,13 @@
-use chrono::{Datelike, Months, NaiveDate, NaiveWeek, Weekday};
+use chrono::{Datelike, Local, Months, NaiveDate, NaiveTime, NaiveWeek, Weekday};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+
+use crate::{deserializers::Deserializer, types::error::ScheduleParseError, utils::WeekRange};
 
 /// Holds information for the entire schedule as it is currently known
 #[derive(Debug)]
 pub struct Schedule {
-    pub weeks: [ScheduleWeek; 52],
+    pub weeks: [ScheduleWeek; 53],
 }
 
 /// Contains information for a single week in the schedule
@@ -32,8 +36,58 @@ pub struct Lesson {
     pub room: String,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct RawOccasion {
+    weeks: u64,
+    excluding_weeks: u64,
+    cre_by_id: u64,
+    source: serde_json::Value,
+    external_ref: String,
+    subject_id: u64,
+    org_id: u64,
+    upd_date: String,
+    upd_by_type: i32,
+    exclude_class: u64,
+    start_time: String,
+    id: u64,
+    including_weeks: u64,
+    subject_name: String,
+    upd_by_id: u64,
+    cre_by_type: i32,
+    cre_date: String,
+    length: u64,
+    external_id: String,
+    room_name: String,
+    period_weeks: u64,
+    including_weeks_string: String,
+    day_id: u8,
+    name: String,
+    absence_type: u64,
+    guid: String,
+    excluding_weeks_string: String,
+    end_time: String,
+    weeks_string: String,
+    tmp_lesson: u64,
+}
+
+#[derive(Debug)]
+pub struct Occasion {
+    pub id: u64,
+    pub uuid: Uuid,
+    pub start_time: NaiveTime,
+    pub end_time: NaiveTime,
+    pub name: String,
+    pub room_name: String,
+    pub week_day: Weekday,
+    pub weeks: Vec<u8>,
+}
+
 impl Schedule {
     /// Create a new Schedule
+    ///
+    /// Note that weeks are shifted down by one, i.e the first week of the year (week 1) will have
+    /// the index 0
     ///
     /// If the start date is at the first half of the year, it means we are in the end of the school year.
     /// And the later half of the weeks will be from last year.
@@ -59,7 +113,7 @@ impl Schedule {
     /// let april = NaiveDate::from_ymd(2024, 4, 1);
     /// let schedule = Schedule::from(april);
     ///
-    /// assert_eq!(schedule.weeks.len(), 52);
+    /// assert_eq!(schedule.weeks.len(), 53);
     /// assert_eq!(schedule.weeks[10].monday.date.year_ce(), (true, 2024));
     /// assert_eq!(schedule.weeks[40].monday.date.year_ce(), (true, 2023));
     /// ```
@@ -72,7 +126,7 @@ impl Schedule {
     /// let september = NaiveDate::from_ymd(2024, 9, 1);
     /// let schedule = Schedule::from(september);
     ///
-    /// assert_eq!(schedule.weeks.len(), 52);
+    /// assert_eq!(schedule.weeks.len(), 53);
     /// assert_eq!(schedule.weeks[10].monday.date.year_ce(), (true, 2025));
     /// assert_eq!(schedule.weeks[40].monday.date.year_ce(), (true, 2024));
     /// ```
@@ -91,7 +145,7 @@ impl Schedule {
                     .unwrap()
                     .iter_weeks()
                     .skip(26)
-                    .take(26);
+                    .take(27);
 
                 // Combine the two
                 this_year_weeks.chain(prev_year_weeks)
@@ -106,7 +160,7 @@ impl Schedule {
                     .take(26);
 
                 // Second half of this year
-                let this_year_weeks = start_of_year.iter_weeks().skip(26).take(26);
+                let this_year_weeks = start_of_year.iter_weeks().skip(26).take(27);
 
                 // Combine the two
                 next_year_weeks.chain(this_year_weeks)
@@ -114,7 +168,7 @@ impl Schedule {
         };
 
         Schedule {
-            weeks: [0; 52].map(|_| {
+            weeks: [0; 53].map(|_| {
                 ScheduleWeek::new_empty(weeks.next().unwrap().week(Weekday::Mon)).unwrap()
             }),
         }
@@ -160,6 +214,94 @@ impl ScheduleWeek {
     }
 }
 
+impl TryFrom<RawOccasion> for Occasion {
+    type Error = ScheduleParseError;
+
+    fn try_from(value: RawOccasion) -> Result<Self, Self::Error> {
+        let mut weeks_mask = [false; 54];
+        let mut weeks = Vec::new();
+
+        // Base weeks
+        for week in WeekRange::from(value.weeks_string.as_str()) {
+            weeks_mask[week as usize] = true;
+        }
+
+        // Excluded weeks
+        for week in WeekRange::from(value.excluding_weeks_string.as_str()) {
+            weeks_mask[week as usize] = false;
+        }
+
+        // Included weeks
+        for week in WeekRange::from(value.including_weeks_string.as_str()) {
+            weeks_mask[week as usize] = true;
+        }
+
+        // Convert mask to vector of weeks
+        for (i, week) in weeks_mask.iter().enumerate() {
+            if *week {
+                weeks.push(i as u8);
+            }
+        }
+
+        let uuid = Uuid::parse_str(&value.guid).map_err(ScheduleParseError::UuidParseError)?;
+        let week_day =
+            Weekday::try_from(value.day_id).map_err(ScheduleParseError::DayOfWeekError)?;
+
+        let start_time = NaiveTime::parse_from_str(&value.start_time, "%Y-%m-%d %H:%M:%S%.f")
+            .map_err(ScheduleParseError::TimeParseError)?;
+        let end_time = NaiveTime::parse_from_str(&value.end_time, "%Y-%m-%d %H:%M:%S%.f")
+            .map_err(ScheduleParseError::TimeParseError)?;
+
+        Ok(Occasion {
+            id: value.id,
+            uuid,
+            start_time,
+            end_time,
+            name: value.name,
+            room_name: value.room_name,
+            week_day,
+            weeks,
+        })
+    }
+}
+
+impl Deserializer for Schedule {
+    type Error = ScheduleParseError;
+
+    fn deserialize(data: &str) -> Result<Self, Self::Error> {
+        let raw: Vec<RawOccasion> =
+            serde_json::from_str(data).map_err(ScheduleParseError::SerdeError)?;
+
+        let mut schedule = Schedule::from(Local::now().naive_local().date());
+
+        for raw_occasion in raw {
+            let occasion = Occasion::try_from(raw_occasion)?;
+            let lesson = Lesson {
+                start: occasion.start_time,
+                end: occasion.end_time,
+                name: occasion.name,
+                room: occasion.room_name,
+            };
+
+            for week in occasion.weeks {
+                let x = &mut schedule.weeks[(week-1) as usize];
+                match occasion.week_day {
+                    Weekday::Mon => &mut x.monday,
+                    Weekday::Tue => &mut x.tuesday,
+                    Weekday::Wed => &mut x.wednesday,
+                    Weekday::Thu => &mut x.thursday,
+                    Weekday::Fri => &mut x.friday,
+                    _ => continue,
+                }
+                .lessons
+                .push(lesson.clone());
+            }
+        }
+
+        Ok(schedule)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -167,7 +309,8 @@ mod tests {
     #[test]
     #[allow(deprecated)]
     fn test_schedule_week() {
-        let week = ScheduleWeek::new_empty(NaiveDate::from_ymd(2024, 3, 25).week(Weekday::Mon)).unwrap();
+        let week =
+            ScheduleWeek::new_empty(NaiveDate::from_ymd(2024, 3, 25).week(Weekday::Mon)).unwrap();
 
         assert_eq!(week.monday.date, NaiveDate::from_ymd(2024, 3, 25));
         assert_eq!(week.tuesday.date, NaiveDate::from_ymd(2024, 3, 26));
