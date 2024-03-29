@@ -76,14 +76,18 @@ impl Iterator for WeekRange<'_> {
 
         let mut start = 0;
 
-        for c in self.input.by_ref() {
+        let iter = self.input.by_ref();
+
+        while let Some(c) = iter.next() {
+            println!("{}", c);
             if c == '-' {
                 start = temp.parse().ok()?;
                 temp.clear();
+                continue;
             }
 
-            if c == ' ' {
-                break;
+            if c == ',' && iter.next() == Some(' ') {
+                   break;
             }
 
             temp.push(c);
@@ -95,7 +99,7 @@ impl Iterator for WeekRange<'_> {
             return Some(end);
         }
 
-        self.range = Some(start + 1..end);
+        self.range = Some(start + 1..end + 1);
 
         Some(start)
     }
@@ -120,26 +124,27 @@ macro_rules! rest {
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::utils;
-
-    use super::WeekRange;
-
+mod url_macros {
     #[test]
-    fn test_macro() {
+    fn rest_example() {
         let base = "https://example.com";
         assert_eq!(rest!(base, test), "https://example.com/rest/app/test");
     }
+}
+
+#[cfg(test)]
+mod parsers {
+    use crate::utils;
 
     #[test]
-    fn test_parse_date() {
+    fn date() {
         let date = "2021-01-01";
         let parsed = utils::parse_date(date).unwrap();
         assert_eq!(parsed, chrono::NaiveDate::from_ymd_opt(2021, 1, 1).unwrap());
     }
 
     #[test]
-    fn test_parse_datetime() {
+    fn datetime() {
         let date = "2021-01-01 12:00:00.000";
         let parsed = utils::parse_datetime(date).unwrap();
         assert_eq!(
@@ -150,14 +155,36 @@ mod tests {
                 .unwrap()
         );
     }
+}
+
+#[cfg(test)]
+mod week_parser {
+    use super::WeekRange;
 
     #[test]
-    fn test_week_parser() {
-        let input = "10 11-14";
-        let expected = [10, 11, 12, 13, 14].into_iter();
+    fn single() {
+        let input = "11";
+        let expected: Vec<u8> = vec![11];
+        let actual: Vec<u8> = WeekRange::from(input).collect();
 
-        for (actual, expected) in expected.zip(WeekRange::from(input)) {
-            assert_eq!(actual, expected);
-        };
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn range() {
+        let input = "13-17";
+        let expected: Vec<u8> = vec![13, 14, 15, 16, 17];
+        let actual: Vec<u8> = WeekRange::from(input).collect();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn complex() {
+        let input = "30-37, 39, 40-42, 44-50";
+        let expected: Vec<u8> = vec![30, 31, 32, 33, 34, 35, 36, 37, 39, 40, 41, 42, 44, 45, 46, 47, 48, 49, 50];
+        let actual: Vec<u8> = WeekRange::from(input).collect();
+
+        assert_eq!(expected, actual);
     }
 }
