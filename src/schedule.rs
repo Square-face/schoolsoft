@@ -1,10 +1,12 @@
+use std::collections::BinaryHeap;
+
 use chrono::{Datelike, Local, Months, NaiveDate, NaiveTime, NaiveWeek, Weekday};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{deserializers::Deserializer, types::error::ScheduleParseError, utils::WeekRange};
 
-/// Holds information for the entire schedule as it is currently known
+/// Holds the entire schedule
 #[derive(Debug)]
 pub struct Schedule {
     pub weeks: [ScheduleWeek; 53],
@@ -13,7 +15,9 @@ pub struct Schedule {
 /// Contains information for a single week in the schedule
 #[derive(Debug)]
 pub struct ScheduleWeek {
+    /// The week
     pub week: NaiveWeek,
+
     pub monday: ScheduleDay,
     pub tuesday: ScheduleDay,
     pub wednesday: ScheduleDay,
@@ -24,10 +28,14 @@ pub struct ScheduleWeek {
 }
 
 /// Contains information for a single day in the schedule
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct ScheduleDay {
+    /// The date of the day
     pub date: NaiveDate,
-    pub lessons: Vec<Lesson>,
+
+    /// Lessons for the day
+    /// Represented as a binary heap to always have them sorted
+    pub lessons: BinaryHeap<Lesson>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,17 +44,6 @@ pub struct Lesson {
     pub end: chrono::NaiveTime,
     pub name: String,
     pub room: String,
-}
-
-impl From<&Occasion> for Lesson {
-    fn from(value: &Occasion) -> Self {
-        Lesson {
-            start: value.start_time,
-            end: value.end_time,
-            name: value.subject_name.clone(),
-            room: value.room_name.clone(),
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -213,7 +210,7 @@ impl ScheduleDay {
     pub fn new(date: NaiveDate) -> Self {
         Self {
             date,
-            lessons: Vec::new(),
+            lessons: BinaryHeap::new(),
         }
     }
 }
@@ -280,6 +277,35 @@ impl ScheduleWeek {
     }
 }
 
+impl Deserializer for Schedule {
+    type Error = ScheduleParseError;
+
+    fn deserialize(data: &str) -> Result<Self, Self::Error> {
+        let raw: Vec<RawOccasion> =
+            serde_json::from_str(data).map_err(ScheduleParseError::SerdeError)?;
+
+        let mut schedule = Schedule::from(Local::now().naive_local().date());
+
+        // Populate the schedule with lessons
+        for raw_occasion in raw {
+            let occasion = Occasion::try_from(raw_occasion)?;
+            let lesson = Lesson::from(&occasion);
+
+            // Add lesson to all the weeks it occurs in
+            for week in occasion.weeks {
+                schedule.weeks[(week - 1) as usize]
+                    .get_day(occasion.week_day)
+                    .lessons
+                    .push(lesson.clone());
+            }
+        }
+
+        // Sort the lessons in each day
+
+        Ok(schedule)
+    }
+}
+
 impl TryFrom<RawOccasion> for Occasion {
     type Error = ScheduleParseError;
 
@@ -331,30 +357,29 @@ impl TryFrom<RawOccasion> for Occasion {
     }
 }
 
-impl Deserializer for Schedule {
-    type Error = ScheduleParseError;
-
-    fn deserialize(data: &str) -> Result<Self, Self::Error> {
-        let raw: Vec<RawOccasion> =
-            serde_json::from_str(data).map_err(ScheduleParseError::SerdeError)?;
-
-        let mut schedule = Schedule::from(Local::now().naive_local().date());
-
-        for raw_occasion in raw {
-            let occasion = Occasion::try_from(raw_occasion)?;
-            let lesson = Lesson::from(&occasion);
-
-            for week in occasion.weeks {
-                schedule.weeks[(week - 1) as usize]
-                    .get_day(occasion.week_day)
-                    .lessons
-                    .push(lesson.clone());
-            }
-        }
-
-        Ok(schedule)
+impl PartialOrd for Lesson {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
+
+impl Ord for Lesson {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.start.cmp(&other.start)
+    }
+}
+
+impl From<&Occasion> for Lesson {
+    fn from(value: &Occasion) -> Self {
+        Lesson {
+            start: value.start_time,
+            end: value.end_time,
+            name: value.subject_name.clone(),
+            room: value.room_name.clone(),
+        }
+    }
+}
+
 
 #[cfg(test)]
 mod week {
