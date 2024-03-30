@@ -84,15 +84,36 @@ pub struct RawOccasion {
     tmp_lesson: u64,
 }
 
+/// Contains information for a single occasion in the schedule
+///
+/// Schoolsofts api returns schedule information in what i call "occasions". (other name suggestions are welcome)
+/// A occasion is a single point in a week where a lesson might occur. but only during certain weeks.
+///
+/// So there might be a occasion for math on monday at 08:00-09:00, but only during weeks 1-10.
 #[derive(Debug)]
 pub struct Occasion {
+    /// Numeric occasion id
     pub id: u64,
+
+    /// UUID of the occasion
     pub uuid: Uuid,
+
+    /// Time of day when the lesson starts
     pub start_time: NaiveTime,
+
+    /// Time of day when the lesson ends
     pub end_time: NaiveTime,
+
+    /// Name of the subject
     pub subject_name: String,
+
+    /// The location where the lesson takes place
     pub room_name: String,
+
+    /// The day of the week when the lesson occurs
     pub week_day: Weekday,
+
+    /// The weeks when the lesson occurs
     pub weeks: Vec<u8>,
 }
 
