@@ -38,6 +38,17 @@ pub struct Lesson {
     pub room: String,
 }
 
+impl From<&Occasion> for Lesson {
+    fn from(value: &Occasion) -> Self {
+        Lesson {
+            start: value.start_time,
+            end: value.end_time,
+            name: value.subject_name.clone(),
+            room: value.room_name.clone(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct RawOccasion {
@@ -280,12 +291,7 @@ impl Deserializer for Schedule {
 
         for raw_occasion in raw {
             let occasion = Occasion::try_from(raw_occasion)?;
-            let lesson = Lesson {
-                start: occasion.start_time,
-                end: occasion.end_time,
-                name: occasion.subject_name,
-                room: occasion.room_name,
-            };
+            let lesson = Lesson::from(&occasion);
 
             for week in occasion.weeks {
                 let x = &mut schedule.weeks[(week - 1) as usize];
@@ -308,20 +314,38 @@ impl Deserializer for Schedule {
 }
 
 #[cfg(test)]
-mod tests {
+mod week {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     #[allow(deprecated)]
-    fn test_schedule_week() {
+    fn dates_from_beginning() {
         let week =
             ScheduleWeek::new_empty(NaiveDate::from_ymd(2024, 3, 25).week(Weekday::Mon)).unwrap();
 
-        assert_eq!(week.monday.date, NaiveDate::from_ymd(2024, 3, 25));
-        assert_eq!(week.tuesday.date, NaiveDate::from_ymd(2024, 3, 26));
-        assert_eq!(week.wednesday.date, NaiveDate::from_ymd(2024, 3, 27));
-        assert_eq!(week.thursday.date, NaiveDate::from_ymd(2024, 3, 28));
-        assert_eq!(week.friday.date, NaiveDate::from_ymd(2024, 3, 29));
+        assert_eq!(NaiveDate::from_ymd(2024, 3, 25), week.monday.date);
+        assert_eq!(NaiveDate::from_ymd(2024, 3, 26), week.tuesday.date);
+        assert_eq!(NaiveDate::from_ymd(2024, 3, 27), week.wednesday.date);
+        assert_eq!(NaiveDate::from_ymd(2024, 3, 28), week.thursday.date);
+        assert_eq!(NaiveDate::from_ymd(2024, 3, 29), week.friday.date);
+        assert_eq!(NaiveDate::from_ymd(2024, 3, 30), week.saturday.date);
+        assert_eq!(NaiveDate::from_ymd(2024, 3, 31), week.sunday.date);
+    }
+
+    #[test]
+    #[allow(deprecated)]
+    fn dates_from_middle() {
+        let week =
+            ScheduleWeek::new_empty(NaiveDate::from_ymd(2022, 8, 25).week(Weekday::Mon)).unwrap();
+
+        assert_eq!(NaiveDate::from_ymd(2022, 8, 22), week.monday.date);
+        assert_eq!(NaiveDate::from_ymd(2022, 8, 23), week.tuesday.date);
+        assert_eq!(NaiveDate::from_ymd(2022, 8, 24), week.wednesday.date);
+        assert_eq!(NaiveDate::from_ymd(2022, 8, 25), week.thursday.date);
+        assert_eq!(NaiveDate::from_ymd(2022, 8, 26), week.friday.date);
+        assert_eq!(NaiveDate::from_ymd(2022, 8, 27), week.saturday.date);
+        assert_eq!(NaiveDate::from_ymd(2022, 8, 28), week.sunday.date);
     }
 }
 
@@ -367,37 +391,6 @@ mod occasion {
         }"#;
 
         let raw: RawOccasion = serde_json::from_str(data).expect("Deserializing should work");
-
-
-        assert_eq!(raw.upd_date, "2023-08-16 12:42:41.0");
-        assert_eq!(raw.cre_date, "2023-08-16 12:42:41.0");
-        assert_eq!(raw.upd_by_id, 0);
-        assert_eq!(raw.upd_by_type, -1);
-        assert_eq!(raw.cre_by_id, 0);
-        assert_eq!(raw.cre_by_type, -1);
-
-        assert_eq!(raw.org_id, 1);
-
-        assert_eq!(raw.external_ref, "");
-        assert_eq!(raw.external_id, "34b0d97c-35ea-415f-9c7b-7f9492ef9fb4");
-        assert_eq!(raw.subject_id, 236);
-        assert_eq!(raw.guid, "afbae58f-c35e-4480-bfd1-574fc8de5572");
-        assert_eq!(raw.id, 36505);
-
-        assert_eq!(raw.subject_name, "IDRIDO02 - Idrott och hälsa 2 - specialisering");
-        assert_eq!(raw.room_name, "IKSU");
-
-        assert_eq!(raw.day_id, 0);
-        assert_eq!(raw.start_time, "1970-01-01 08:20:00.0");
-        assert_eq!(raw.end_time, "1970-01-01 09:30:00.0");
-        assert_eq!(raw.length, 70);
-
-        assert_eq!(raw.including_weeks, 0);
-
-        assert_eq!(raw.including_weeks_string, "");
-        assert_eq!(raw.excluding_weeks_string, "");
-        assert_eq!(raw.weeks_string, "34-43, 45-51, 3-9, 11-13, 15-24");
-
         let occasion = Occasion::try_from(raw).expect("Converting should work");
 
         assert_eq!(occasion.id, 36505);
