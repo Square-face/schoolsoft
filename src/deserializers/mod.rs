@@ -12,7 +12,7 @@ pub mod user;
 
 /// Implemented to allow a struct to be deserialized from a json response
 /// In most cases this is just a wrapper around serde_json::from_str with some error handling.
-/// But some deserializers require more complex logic witch is why this is a thing.
+/// But some deserializers require more complex logic which is why this is a thing.
 pub trait Deserializer {
     type Error;
 
