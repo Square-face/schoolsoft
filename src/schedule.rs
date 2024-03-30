@@ -227,6 +227,36 @@ impl ScheduleWeek {
             sunday: ScheduleDay::new(days.next()?),
         })
     }
+
+    /// Get a mutable reference to a specific day in the week
+    ///
+    /// # Arguments
+    /// * `day` - The day to get as a [Weekday]
+    ///
+    /// # Returns
+    /// A mutable reference to the day
+    ///
+    /// # Examples
+    /// ```
+    /// # use chrono::{NaiveDate, Weekday, NaiveWeek, Datelike};
+    /// # use schoolsoft::schedule::ScheduleWeek;
+    /// let start = NaiveDate::from_ymd(2024, 3, 30);
+    /// let mut week = ScheduleWeek::new_empty(start.week(Weekday::Mon)).unwrap();
+    /// let saturday = week.get_day(Weekday::Sat);
+    ///
+    /// assert_eq!(saturday.date, NaiveDate::from_ymd(2024, 3, 30));
+    /// ```
+    pub fn get_day(&mut self, day: Weekday) -> &mut ScheduleDay {
+        match day {
+            Weekday::Mon => &mut self.monday,
+            Weekday::Tue => &mut self.tuesday,
+            Weekday::Wed => &mut self.wednesday,
+            Weekday::Thu => &mut self.thursday,
+            Weekday::Fri => &mut self.friday,
+            Weekday::Sat => &mut self.saturday,
+            Weekday::Sun => &mut self.sunday,
+        }
+    }
 }
 
 impl TryFrom<RawOccasion> for Occasion {
@@ -294,18 +324,10 @@ impl Deserializer for Schedule {
             let lesson = Lesson::from(&occasion);
 
             for week in occasion.weeks {
-                let x = &mut schedule.weeks[(week - 1) as usize];
-                match occasion.week_day {
-                    Weekday::Mon => &mut x.monday,
-                    Weekday::Tue => &mut x.tuesday,
-                    Weekday::Wed => &mut x.wednesday,
-                    Weekday::Thu => &mut x.thursday,
-                    Weekday::Fri => &mut x.friday,
-                    Weekday::Sat => &mut x.saturday,
-                    Weekday::Sun => &mut x.sunday,
-                }
-                .lessons
-                .push(lesson.clone());
+                schedule.weeks[(week - 1) as usize]
+                    .get_day(occasion.week_day)
+                    .lessons
+                    .push(lesson.clone());
             }
         }
 
