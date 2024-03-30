@@ -416,12 +416,27 @@ mod occasion {
         let occasion = Occasion::try_from(raw).expect("Converting should work");
 
         assert_eq!(occasion.id, 36505);
-        assert_eq!(occasion.uuid.to_string(), "afbae58f-c35e-4480-bfd1-574fc8de5572");
+        assert_eq!(
+            occasion.uuid.to_string(),
+            "afbae58f-c35e-4480-bfd1-574fc8de5572"
+        );
+
+        assert_eq!(occasion.room_name, "IKSU");
+        assert_eq!(
+            occasion.subject_name,
+            "IDRIDO02 - Idrott och hälsa 2 - specialisering"
+        );
+
         assert_eq!(occasion.start_time.to_string(), "08:20:00");
         assert_eq!(occasion.end_time.to_string(), "09:30:00");
-        assert_eq!(occasion.subject_name, "IDRIDO02 - Idrott och hälsa 2 - specialisering");
-        assert_eq!(occasion.room_name, "IKSU");
+
         assert_eq!(occasion.week_day, chrono::Weekday::Mon);
-        assert_eq!(occasion.weeks, vec![3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 45, 46, 47, 48, 49, 50, 51]);
+        assert_eq!(
+            occasion.weeks,
+            vec![
+                3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 34, 35,
+                36, 37, 38, 39, 40, 41, 42, 43, 45, 46, 47, 48, 49, 50, 51
+            ]
+        );
     }
 }
