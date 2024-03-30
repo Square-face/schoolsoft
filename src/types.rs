@@ -1,7 +1,7 @@
 //! Type definitions for the structs and errors that the wrapper can return
 
+use reqwest::Url;
 use serde_repr::Deserialize_repr;
-use uuid::Uuid;
 
 /// The type of user
 ///
@@ -76,7 +76,7 @@ pub struct Org {
 /// returned by the api when logging in.
 #[derive(Debug, Clone)]
 pub struct User {
-    pub school_url: String,
+    pub school_url: Url,
     pub client: reqwest::Client,
 
     /// Users full name

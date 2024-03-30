@@ -1,10 +1,11 @@
+use super::Deserializer;
 use crate::{
     types::{Org, User, UserType},
     user::Token,
 };
+use reqwest::Url;
 use serde::de::Error;
 use serde::Deserialize;
-use super::Deserializer;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -70,21 +71,15 @@ impl Deserializer for User {
     fn deserialize(json: &str) -> Result<User, serde_json::Error> {
         let raw: RawUser = serde_json::from_str(json)?;
 
-        let orgs: Vec<_> = raw
-            .orgs
-            .into_iter()
-            .map(|raw_org| Org {
-                id: raw_org.org_id,
-                name: raw_org.name,
-                blogger: raw_org.blogger,
-                school_type: raw_org.school_type,
-                leisure_school: raw_org.leisure_school,
-                class: raw_org.class,
-                token_login: raw_org.token_login,
-            })
-            .collect();
+        // This is technically unnecessary but allows for future functionality to be added to Org
+        let orgs: Vec<Org> = raw.orgs.into_iter().map(Org::from).collect();
 
-        let school_url = orgs[0].token_login.clone().split('/').take(3).collect();
+        // There must be a better way to only get the first part of the path without any query args or fragments
+        let mut school_url = Url::parse(&orgs[0].token_login).unwrap();
+        let segments = school_url.clone();
+        school_url.set_path(segments.path_segments().unwrap().next().unwrap());
+        school_url.set_query(None);
+        school_url.set_fragment(None);
 
         Ok(User {
             school_url,
@@ -147,6 +142,20 @@ impl UserType {
             2 => Some(UserType::Parent),
             3 => Some(UserType::Teacher),
             _ => None,
+        }
+    }
+}
+
+impl From<RawOrg> for Org {
+    fn from(value: RawOrg) -> Self {
+        Org {
+            id: value.org_id,
+            name: value.name,
+            blogger: value.blogger,
+            school_type: value.school_type,
+            leisure_school: value.leisure_school,
+            class: value.class,
+            token_login: value.token_login,
         }
     }
 }

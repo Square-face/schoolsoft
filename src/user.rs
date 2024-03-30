@@ -5,13 +5,14 @@ use crate::types::error::{LunchMenuError, ScheduleError, TokenError};
 use crate::types::LunchMenu;
 use crate::utils::{api, make_request};
 use chrono::Duration;
+use reqwest::Url;
 
 pub use crate::types::{Org, Token, User, UserType};
 
 impl User {
     /// Manually create a new user
     pub fn new(
-        school_url: String,
+        school_url: Url,
         name: String,
         app_key: String,
         user_type: UserType,
@@ -37,9 +38,13 @@ impl User {
     /// This method uses the app key to get a new token from the schoolsoft api. The token is then
     /// used to authenticate to the api when making other requests.
     pub async fn get_token(&mut self) -> Result<Token, TokenError> {
+        let url = rest!(self.school_url, token);
+
+        println!("url: {}", url);
+
         let request = self
             .client
-            .post(rest!(self.school_url, token))
+            .post(url)
             .header("appKey", &self.app_key)
             .header("deviceid", "TempleOs");
 

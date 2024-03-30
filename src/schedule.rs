@@ -77,7 +77,7 @@ pub struct Occasion {
     pub uuid: Uuid,
     pub start_time: NaiveTime,
     pub end_time: NaiveTime,
-    pub name: String,
+    pub subject_name: String,
     pub room_name: String,
     pub week_day: Weekday,
     pub weeks: Vec<u8>,
@@ -257,7 +257,7 @@ impl TryFrom<RawOccasion> for Occasion {
             uuid,
             start_time,
             end_time,
-            name: value.name,
+            subject_name: value.subject_name,
             room_name: value.room_name,
             week_day,
             weeks,
@@ -279,12 +279,12 @@ impl Deserializer for Schedule {
             let lesson = Lesson {
                 start: occasion.start_time,
                 end: occasion.end_time,
-                name: occasion.name,
+                name: occasion.subject_name,
                 room: occasion.room_name,
             };
 
             for week in occasion.weeks {
-                let x = &mut schedule.weeks[(week-1) as usize];
+                let x = &mut schedule.weeks[(week - 1) as usize];
                 match occasion.week_day {
                     Weekday::Mon => &mut x.monday,
                     Weekday::Tue => &mut x.tuesday,
@@ -317,5 +317,91 @@ mod tests {
         assert_eq!(week.wednesday.date, NaiveDate::from_ymd(2024, 3, 27));
         assert_eq!(week.thursday.date, NaiveDate::from_ymd(2024, 3, 28));
         assert_eq!(week.friday.date, NaiveDate::from_ymd(2024, 3, 29));
+    }
+}
+
+#[cfg(test)]
+mod occasion {
+    use pretty_assertions::assert_eq;
+
+    use super::{Occasion, RawOccasion};
+
+    #[test]
+    fn deserialize() {
+        let data = r#"{
+            "weeks": 2242995147496956,
+            "excludingWeeks": 0,
+            "creById": 0,
+            "source": {},
+            "externalRef": "",
+            "subjectId": 236,
+            "orgId": 1,
+            "updDate": "2023-08-16 12:42:41.0",
+            "updByType": -1,
+            "excludeClass": 0,
+            "startTime": "1970-01-01 08:20:00.0",
+            "id": 36505,
+            "includingWeeks": 0,
+            "subjectName": "IDRIDO02 - Idrott och hälsa 2 - specialisering",
+            "updById": 0,
+            "creByType": -1,
+            "creDate": "2023-08-16 12:42:41.0",
+            "length": 70,
+            "externalId": "34b0d97c-35ea-415f-9c7b-7f9492ef9fb4",
+            "roomName": "IKSU",
+            "periodWeeks": 2242995147496956,
+            "includingWeeksString": "",
+            "dayId": 0,
+            "name": "",
+            "absenceType": 1,
+            "guid": "afbae58f-c35e-4480-bfd1-574fc8de5572",
+            "excludingWeeksString": "",
+            "endTime": "1970-01-01 09:30:00.0",
+            "weeksString": "34-43, 45-51, 3-9, 11-13, 15-24",
+            "tmpLesson": 0
+        }"#;
+
+        let raw: RawOccasion = serde_json::from_str(data).expect("Deserializing should work");
+
+
+        assert_eq!(raw.upd_date, "2023-08-16 12:42:41.0");
+        assert_eq!(raw.cre_date, "2023-08-16 12:42:41.0");
+        assert_eq!(raw.upd_by_id, 0);
+        assert_eq!(raw.upd_by_type, -1);
+        assert_eq!(raw.cre_by_id, 0);
+        assert_eq!(raw.cre_by_type, -1);
+
+        assert_eq!(raw.org_id, 1);
+
+        assert_eq!(raw.external_ref, "");
+        assert_eq!(raw.external_id, "34b0d97c-35ea-415f-9c7b-7f9492ef9fb4");
+        assert_eq!(raw.subject_id, 236);
+        assert_eq!(raw.guid, "afbae58f-c35e-4480-bfd1-574fc8de5572");
+        assert_eq!(raw.id, 36505);
+
+        assert_eq!(raw.subject_name, "IDRIDO02 - Idrott och hälsa 2 - specialisering");
+        assert_eq!(raw.room_name, "IKSU");
+
+        assert_eq!(raw.day_id, 0);
+        assert_eq!(raw.start_time, "1970-01-01 08:20:00.0");
+        assert_eq!(raw.end_time, "1970-01-01 09:30:00.0");
+        assert_eq!(raw.length, 70);
+
+        assert_eq!(raw.including_weeks, 0);
+
+        assert_eq!(raw.including_weeks_string, "");
+        assert_eq!(raw.excluding_weeks_string, "");
+        assert_eq!(raw.weeks_string, "34-43, 45-51, 3-9, 11-13, 15-24");
+
+        let occasion = Occasion::try_from(raw).expect("Converting should work");
+
+        assert_eq!(occasion.id, 36505);
+        assert_eq!(occasion.uuid.to_string(), "afbae58f-c35e-4480-bfd1-574fc8de5572");
+        assert_eq!(occasion.start_time.to_string(), "08:20:00");
+        assert_eq!(occasion.end_time.to_string(), "09:30:00");
+        assert_eq!(occasion.subject_name, "IDRIDO02 - Idrott och hälsa 2 - specialisering");
+        assert_eq!(occasion.room_name, "IKSU");
+        assert_eq!(occasion.week_day, chrono::Weekday::Mon);
+        assert_eq!(occasion.weeks, vec![3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 45, 46, 47, 48, 49, 50, 51]);
     }
 }
