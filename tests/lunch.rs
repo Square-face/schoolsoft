@@ -1,33 +1,23 @@
-use schoolsoft::ClientBuilder;
-use tokio::test;
-
-use crate::mock::get_with_token_and_login;
+use crate::mock::{basic_user_with_token, get};
 
 mod mock;
 
-#[test]
-async fn full() {
+#[tokio::test]
+async fn request() {
     let mut server = mockito::Server::new();
 
-    let (login, token, lunch) = get_with_token_and_login(
+    let mock = get(
         &mut server,
         "api/lunchmenus/student/1",
         include_str!("../hurl/output/lunch.json"),
+        Some("mock_school"),
     );
 
-    let mut client = ClientBuilder::new().base_url(server.url()).build();
+    let mut user = basic_user_with_token(&server.url());
 
-    let login_attempt = client
-        .login("mock_username", "mock_password", "mock_school")
-        .await;
+    let response = user.get_lunch().await;
 
-    login.assert();
-    login_attempt.expect("Login should be successful");
+    mock.assert();
 
-    let mut user = client.user.expect("User should be set after login");
-
-    user.get_lunch().await.expect("Failed to get lunch");
-
-    token.assert();
-    lunch.assert();
+    response.expect("Failed to get lunch");
 }

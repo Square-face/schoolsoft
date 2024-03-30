@@ -14,7 +14,7 @@ mod mock;
 #[test]
 async fn authorized() {
     let mut server = mockito::Server::new();
-    let mock = login_mock(&mut server, "mock_school");
+    let mock = login_mock(&mut server, Some("mock_school"));
 
     let mut client = ClientBuilder::new().base_url(server.url()).build();
     client.login("mock_username", "mock_password", "mock_school").await.expect("Login should be successful");

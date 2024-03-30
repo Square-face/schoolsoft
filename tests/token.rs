@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 use chrono::{Duration, NaiveDate};
 use schoolsoft::types::error::{RequestError, TokenError};
 use tokio::test;
@@ -7,12 +8,11 @@ use crate::mock::{basic_user, token_mock};
 mod mock;
 
 #[test]
-async fn token_success() {
+async fn ok() {
     let mut server = mockito::Server::new();
 
     let url = server.url();
 
-    #[allow(deprecated)]
     let expiration_date =
         NaiveDate::from_ymd(2024, 2, 12).and_hms(17, 22, 23) + Duration::milliseconds(714);
     let target_token = "123notreal";
@@ -35,7 +35,7 @@ async fn token_success() {
 }
 
 #[test]
-async fn token_bad_auth() {
+async fn unauthorized() {
     let mut server = mockito::Server::new();
 
     let url = server.url();

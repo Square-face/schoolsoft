@@ -1,6 +1,7 @@
-use mock::get_with_token_and_login;
 use mockito::Server;
-use schoolsoft::{deserializers::Deserializer, schedule::Schedule, ClientBuilder};
+use schoolsoft::{deserializers::Deserializer, schedule::Schedule};
+
+use crate::mock::{basic_user_with_token, get};
 
 mod mock;
 
@@ -8,37 +9,27 @@ mod mock;
 /// schoolsofts api
 #[test]
 fn from_example() {
-    let data = include_str!("../hurl/output/schedule.json");
-
-    Schedule::deserialize(data).expect("Deserializing entire schedule should work");
+    Schedule::deserialize(include_str!("../hurl/output/schedule.json"))
+        .expect("Deserializing entire schedule should work");
 }
 
 /// Test the full flow of getting the schedule
 #[tokio::test]
-async fn full() {
+async fn request() {
     let mut server = Server::new();
 
-    let (login, token, schedule) = get_with_token_and_login(
+    let mock = get(
         &mut server,
         "api/lessons/student/1",
         include_str!("../hurl/output/schedule.json"),
+        None,
     );
 
-    let mut client = ClientBuilder::new().base_url(server.url()).build();
+    let mut user = basic_user_with_token(&server.url());
 
-    client
-        .login("mock_username", "mock_password", "mock_school")
-        .await
-        .expect("Login should be successful");
+    let res = user.get_schedule().await;
 
-    login.assert();
+    mock.assert();
 
-    let mut user = client.user.expect("User should be set after login");
-
-    let res_schedule = user.get_schedule().await;
-
-    token.assert();
-    schedule.assert();
-
-    res_schedule.expect("Getting schedule should be successful");
+    res.expect("Getting schedule should be successful");
 }
