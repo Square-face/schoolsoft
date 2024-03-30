@@ -40,8 +40,6 @@ impl User {
     pub async fn get_token(&mut self) -> Result<Token, TokenError> {
         let url = rest!(self.school_url, token);
 
-        println!("url: {}", url);
-
         let request = self
             .client
             .post(url)

@@ -79,7 +79,6 @@ impl Iterator for WeekRange<'_> {
         let iter = self.input.by_ref();
 
         while let Some(c) = iter.next() {
-            println!("{}", c);
             if c == '-' {
                 start = temp.parse().ok()?;
                 temp.clear();
