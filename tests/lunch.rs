@@ -17,12 +17,12 @@ async fn full() {
 
     let mut client = ClientBuilder::new().base_url(server.url()).build();
 
-    client
+    let login_attempt = client
         .login("mock_username", "mock_password", "mock_school")
-        .await
-        .expect("Login should be successful");
+        .await;
 
     login.assert();
+    login_attempt.expect("Login should be successful");
 
     let mut user = client.user.expect("User should be set after login");
 

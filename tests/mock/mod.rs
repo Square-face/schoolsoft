@@ -15,9 +15,10 @@ pub fn basic_user(url: &str) -> User {
     )
 }
 
-pub fn login_mock(server: &mut ServerGuard, base: &str) -> Mock {
+pub fn login_mock(server: &mut ServerGuard, school: &str) -> Mock {
+    let url = server.url();
     server
-        .mock("POST", "/mock_school/rest/app/login")
+        .mock("POST", format!("/{}/rest/app/login", school).as_str())
         .with_status(200)
         .with_body(format!(
             r#"{{
@@ -33,7 +34,7 @@ pub fn login_mock(server: &mut ServerGuard, base: &str) -> Mock {
                         "leisureSchool": 0,
                         "class": "F35b",
                         "orgId": 1,
-                        "tokenLogin": "{base}jsp/app/TokenLogin.jsp?token=TOKEN_PLACEHOLDER&orgid=1&childid=1337&redirect=https%3A%2F%2Fsms1.schoolsoft.se%2mock_school%2Fjsp%2Fstudent%2Fright_student_startpage.jsp"
+                        "tokenLogin": "{url}/{school}/jsp/app/TokenLogin.jsp?token=TOKEN_PLACEHOLDER&orgid=1&childid=1337&redirect=https%3A%2F%2Fsms1.schoolsoft.se%2mock_school%2Fjsp%2Fstudent%2Fright_student_startpage.jsp"
                     }}
                 ],
                 "type": 1,
@@ -59,7 +60,7 @@ pub fn token_mock(server: &mut ServerGuard, token: &str, expiration: Option<&str
 
 /// Create a mock server with a login, token and primary mock with a GET route
 pub fn get_with_token_and_login(server: &mut ServerGuard, path:&str, body: &str) -> (Mock, Mock, Mock) {
-    let login = login_mock(server, &format!("{}/mock_school/", server.url()));
+    let login = login_mock(server, "mock_school");
 
     let token = token_mock(server, "one_of_those_tokens", None);
 
