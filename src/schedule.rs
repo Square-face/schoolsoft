@@ -19,6 +19,8 @@ pub struct ScheduleWeek {
     pub wednesday: ScheduleDay,
     pub thursday: ScheduleDay,
     pub friday: ScheduleDay,
+    pub saturday: ScheduleDay,
+    pub sunday: ScheduleDay,
 }
 
 /// Contains information for a single day in the schedule
@@ -210,6 +212,8 @@ impl ScheduleWeek {
             wednesday: ScheduleDay::new(days.next()?),
             thursday: ScheduleDay::new(days.next()?),
             friday: ScheduleDay::new(days.next()?),
+            saturday: ScheduleDay::new(days.next()?),
+            sunday: ScheduleDay::new(days.next()?),
         })
     }
 }
@@ -291,7 +295,8 @@ impl Deserializer for Schedule {
                     Weekday::Wed => &mut x.wednesday,
                     Weekday::Thu => &mut x.thursday,
                     Weekday::Fri => &mut x.friday,
-                    _ => continue,
+                    Weekday::Sat => &mut x.saturday,
+                    Weekday::Sun => &mut x.sunday,
                 }
                 .lessons
                 .push(lesson.clone());
