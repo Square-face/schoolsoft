@@ -1,25 +1,29 @@
+/// This example logs in to Schoolsoft and prints the next lesson.
+///
+/// The user is prompted for their username, password and school. Which is then used to authenticate
+/// with Schoolsoft. The user's schedule is then fetched and searched for the next lesson.
 use chrono::{Datelike, Utc};
 use schoolsoft::ClientBuilder;
 use std::io;
-use std::io::prelude::*;
 
 #[tokio::main]
 async fn main() -> io::Result<()> {
     let mut client = ClientBuilder::new().build();
-    let stdin = io::stdin();
-    let mut lines = stdin.lock().lines();
-
-    println!("Username: ");
-    let username = lines.next().unwrap()?;
-
-    println!("Password: ");
-    let password = lines.next().unwrap()?;
-
-    println!("School: ");
-    let school = lines.next().unwrap()?;
 
     // Login
-    client.login(&username, &password, &school).await.unwrap();
+    let username = prompt("Username: ")?;
+    let password = prompt("Password: ")?;
+    let school = prompt("School: ")?;
+
+    match client.login(&username, &password, &school).await {
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("Failed to login: {}", e);
+            return Ok(());
+        }
+    };
+
+    // Get user
     let mut user = client.user.unwrap();
     println!("Logged in as {}", user.name);
 
@@ -42,7 +46,6 @@ async fn main() -> io::Result<()> {
 
         // Find the first lesson that hasn't started yet, if any
         for lesson in lessons.iter() {
-
             // if lesson is in the past, skip it
             if schedule.date.and_time(lesson.start) < now {
                 continue;
@@ -54,4 +57,13 @@ async fn main() -> io::Result<()> {
     }
 
     Ok(())
+}
+
+fn prompt(prompt: &str) -> io::Result<String> {
+    let mut buf = String::new();
+
+    println!("{}", prompt);
+    io::stdin().read_line(&mut buf)?;
+
+    Ok(buf.trim_end().to_string())
 }
