@@ -1,5 +1,3 @@
-use std::collections::BinaryHeap;
-
 use chrono::{Datelike, Local, Months, NaiveDate, NaiveTime, NaiveWeek, Weekday};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -35,7 +33,7 @@ pub struct ScheduleDay {
 
     /// Lessons for the day
     /// Represented as a binary heap to always have them sorted
-    pub lessons: BinaryHeap<Lesson>,
+    pub lessons: Vec<Lesson>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -210,7 +208,7 @@ impl ScheduleDay {
     pub fn new(date: NaiveDate) -> Self {
         Self {
             date,
-            lessons: BinaryHeap::new(),
+            lessons: Vec::new(),
         }
     }
 }
@@ -293,14 +291,15 @@ impl Deserializer for Schedule {
 
             // Add lesson to all the weeks it occurs in
             for week in occasion.weeks {
-                schedule.weeks[(week - 1) as usize]
+                let lessons = &mut schedule.weeks[(week - 1) as usize]
                     .get_day(occasion.week_day)
-                    .lessons
-                    .push(lesson.clone());
+                    .lessons;
+
+                // Insert the lesson while keeping the list sorted
+                let pos = lessons.binary_search(&lesson).unwrap_or_else(|e| e);
+                lessons.insert(pos, lesson.clone());
             }
         }
-
-        // Sort the lessons in each day
 
         Ok(schedule)
     }
@@ -357,12 +356,14 @@ impl TryFrom<RawOccasion> for Occasion {
     }
 }
 
+/// See [Ord impl](struct.Lesson.html#impl-Ord)
 impl PartialOrd for Lesson {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
+/// Lessons are ordered by start time
 impl Ord for Lesson {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.start.cmp(&other.start)
@@ -414,6 +415,39 @@ mod week {
         assert_eq!(NaiveDate::from_ymd(2022, 8, 26), week.friday.date);
         assert_eq!(NaiveDate::from_ymd(2022, 8, 27), week.saturday.date);
         assert_eq!(NaiveDate::from_ymd(2022, 8, 28), week.sunday.date);
+    }
+}
+
+#[cfg(test)]
+mod day {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn insert() {
+        let mut day = ScheduleDay::new(NaiveDate::from_ymd(2024, 3, 25));
+
+        day.lessons.push(Lesson {
+            start: NaiveTime::from_hms(8, 0, 0),
+            end: NaiveTime::from_hms(9, 0, 0),
+            name: "Math".to_string(),
+            room: "A1".to_string(),
+        });
+
+        day.lessons.push(Lesson {
+            start: NaiveTime::from_hms(9, 0, 0),
+            end: NaiveTime::from_hms(10, 0, 0),
+            name: "English".to_string(),
+            room: "A2".to_string(),
+        });
+
+        let mut lessons = day.lessons.iter();
+
+        let first = lessons.next().unwrap();
+        assert_eq!(first.name, "Math");
+
+        let second = lessons.next().unwrap();
+        assert_eq!(second.name, "English");
     }
 }
 
