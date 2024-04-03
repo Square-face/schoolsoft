@@ -1,6 +1,6 @@
 [package]
 name = "schoolsoft"
-version = "1.0.0-alpha.0"
+version = "1.0.0-alpha.1"
 edition = "2021"
 authors = ["Linus Michelsson <linus.michelsson@gmail.com>"]
 description = "A library for interacting with SchoolSofts mobile app API"
