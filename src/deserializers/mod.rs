@@ -11,8 +11,11 @@ pub mod school;
 pub mod user;
 
 /// Implemented to allow a struct to be deserialized from a json response
+///
 /// In most cases this is just a wrapper around serde_json::from_str with some error handling.
-/// But some deserializers require more complex logic which is why this is a thing.
+/// But sometimes the deserialization process is a bit more involved than just taking the raw
+/// values. In the future im going to make a custom serde deserializer instead but until then this
+/// is a custom trait.
 pub trait Deserializer {
     type Error;
 
@@ -22,6 +25,11 @@ pub trait Deserializer {
         Self: Sized;
 }
 
+/// Module with custom serde Deserializers for deserializing the weird dates that schoolsoft encode
+/// time as.
+///
+/// They aren't that weird, its just that they are string representations with trailing milliseconds
+/// and the default deserializer for chrono can't handle that.
 pub mod schoolsoft_date {
     use chrono::NaiveDateTime;
     use serde::{self, Deserialize, Deserializer};
