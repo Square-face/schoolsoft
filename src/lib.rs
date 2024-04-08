@@ -3,6 +3,9 @@ use crate::types::SchoolListing;
 use crate::types::User;
 use crate::deserializers::Deserializer;
 
+#[cfg(feature = "serialize")]
+pub mod serializers;
+
 pub mod deserializers;
 pub mod types;
 pub mod user;
