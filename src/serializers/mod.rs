@@ -1,6 +1,6 @@
 use serde::ser::{Serialize, SerializeStruct};
 
-use crate::types::{LoginMethods, Lunch, LunchMenu, SchoolListing};
+use crate::types::{error::SchoolListingError, LoginMethods, Lunch, LunchMenu, SchoolListing};
 
 impl Serialize for LoginMethods {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -59,6 +59,33 @@ impl Serialize for LunchMenu {
     }
 }
 
+impl Serialize for SchoolListingError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("SchoolListingError", 3)?;
+        match self {
+            SchoolListingError::RequestError(e) => {
+                state.serialize_field("type", "RequestError")?;
+                state.serialize_field("msg", "Error when making request")?;
+                state.serialize_field("error", &e.to_string())?;
+            }
+            SchoolListingError::ParseError(e) => {
+                state.serialize_field("type", "ParseError")?;
+                state.serialize_field("msg", "Parsing api response failed")?;
+                state.serialize_field("error", &e.to_string())?;
+            }
+            SchoolListingError::BadUrl => {
+                state.serialize_field("type", "BadUrl")?;
+                state.serialize_field("msg", "The url is not valid")?;
+                state.serialize_field("error", "The url is not valid")?;
+            }
+        }
+        state.end()
+    }
+}
+
 #[cfg(test)]
 mod login_methods {
     use serde_json::json;
@@ -86,8 +113,8 @@ mod login_methods {
 
 #[cfg(test)]
 mod school_listing {
-    use serde_json::json;
     use pretty_assertions::assert_eq;
+    use serde_json::json;
 
     use crate::types::{LoginMethods, SchoolListing};
 
@@ -123,8 +150,8 @@ mod school_listing {
 #[cfg(test)]
 mod lunch {
 
-    use serde_json::json;
     use pretty_assertions::assert_eq;
+    use serde_json::json;
 
     use crate::types::{Lunch, LunchMenu};
 
@@ -201,6 +228,28 @@ mod lunch {
         });
 
         let serialized = serde_json::to_value(lunch_menu).unwrap();
+        assert_eq!(serialized, expected);
+    }
+}
+
+#[cfg(test)]
+mod error {
+    use serde::de::Error;
+
+
+    #[test]
+    fn school_listing_error() {
+        let error = crate::types::error::SchoolListingError::ParseError(
+            serde_json::Error::custom("test_error"),
+        );
+
+        let serialized = serde_json::to_value(error).unwrap();
+        let expected = serde_json::json!({
+            "type": "ParseError",
+            "msg": "Parsing api response failed",
+            "error": "test_error",
+        });
+
         assert_eq!(serialized, expected);
     }
 }
