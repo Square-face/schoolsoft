@@ -18,6 +18,7 @@
       {
         devShells.default = with pkgs; mkShell {
           buildInputs = [
+            hurl
             openssl
             pkg-config
             rust-bin.beta.latest.default
