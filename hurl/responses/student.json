@@ -1,0 +1,8 @@
+{
+  "firstName": "example",
+  "lastName": "person",
+  "logoutURL": "Login.jsp?action=logout",
+  "pictureURL": "/schoolsoft/jsp/student/pictureFile.jsp?studentId=1337&1719008096351",
+  "unreadMessages": 0,
+  "active": true
+}

@@ -1,0 +1,23 @@
+{
+  "app": false,
+  "superLoggedInAsUser": false,
+  "printLogoUrl": "/minervagymnasium/grafics/print_logo.png",
+  "organization": {
+    "id": 1,
+    "name": "NotRealSchool",
+    "school": true
+  },
+  "samlRedirect": false,
+  "userType": {
+    "id": 1,
+    "name": "student"
+  },
+  "adminLoggedInAsUser": false,
+  "user": {
+    "firstName": "example",
+    "lastName": "person",
+    "userName": "21exaper",
+    "email": "example.person@exampleschool.com"
+  },
+  "superUser": false
+}
