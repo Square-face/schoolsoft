@@ -5,9 +5,11 @@ recent changes making the website use more CSR, specificaly the
 schedule/calendar.
 
 ## Routes
+
 The following is a description of the different api routes used by the website
 
 ### Login
+
 Authenticate and get a session id for future api requests
 
 Logging in is made using a POST request to
@@ -36,9 +38,11 @@ part of the cookie header on future requests (and the session hasn't expired), i
 api should just work.
 
 ## Dictionary
+
 Some made up terms to describe parts of the api
 
 ### Url name
+
 The url name is a url friendly version of the schools actual name to allow it to
 be used in the context of a url without encoding.
 
